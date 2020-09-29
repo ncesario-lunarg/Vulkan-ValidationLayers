@@ -368,6 +368,8 @@ class Descriptor {
     virtual bool IsDynamic() const { return false; };
     // Check for storage descriptor type
     virtual bool IsStorage() const { return false; };
+    // Check if offset is valid
+    virtual bool IsOffsetValid(uint32_t offset, bool dynamic) const { return true; };
     bool updated;  // Has descriptor been updated?
     DescriptorClass descriptor_class;
 };
@@ -469,6 +471,7 @@ class BufferDescriptor : public Descriptor {
     void UpdateDrawState(ValidationStateTracker *, CMD_BUFFER_STATE *) override;
     virtual bool IsDynamic() const override { return dynamic_; }
     virtual bool IsStorage() const override { return storage_; }
+    bool IsOffsetValid(uint32_t offset, bool dynamic = false) const override;
     VkBuffer GetBuffer() const { return buffer_; }
     const BUFFER_STATE *GetBufferState() const { return buffer_state_.get(); }
     BUFFER_STATE *GetBufferState() { return buffer_state_.get(); }

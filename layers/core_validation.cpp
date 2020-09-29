@@ -6230,6 +6230,15 @@ bool CoreChecks::PreCallValidateCmdBindDescriptorSets(VkCommandBuffer commandBuf
                     }
                     // Keep running total of dynamic descriptor count to verify at the end
                     total_dynamic_descriptors += set_dynamic_descriptor_count;
+
+                    // (ncesario) Is this the right place to validate "offset out of bounds" type errors?
+                    // (ncesario) Is this the correct "global index"?
+                    auto desc = descriptor_set->GetDescriptorFromGlobalIndex(set_idx);
+                    if (!desc->IsOffsetValid(pDynamicOffsets[cur_dyn_offset], true)) {
+                        skip |= LogError(pDescriptorSets[set_idx], "VUID-vkCmdBindDescriptorSets-pDescriptorSets-01979",
+                                         "vkCmdBindDescriptorSets(): dynamic offset %u is invalid for descriptorSet #%u (%s)",
+                                         pDynamicOffsets[set_idx], set_idx, report_data->FormatHandle(pDescriptorSets[set_idx]).c_str());
+                    }
                 }
             }
         } else {

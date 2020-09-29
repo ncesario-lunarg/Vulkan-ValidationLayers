@@ -4649,11 +4649,58 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     vk::CmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
 
     vk::CmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    // (ncesario) Why? How is range different from size here?
     // This update should succeed, but offset size of 512 will overstep buffer
     // /w range 1024 & size 1024
     vk::CmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout.handle(), 0, 1,
                               &descriptor_set.set_, 1, pDynOff);
     m_commandBuffer->Draw(1, 0, 0, 0);
+    m_errorMonitor->VerifyFound();
+
+    m_commandBuffer->EndRenderPass();
+    m_commandBuffer->end();
+}
+
+// (ncesario) This should probably be added to the above test case (InvalidDynamicOffsetCases), rather than create a new test?
+TEST_F(VkLayerTest, InvalidDynamicOffset) {
+    TEST_DESCRIPTION("Pass a dynamic offset to vkCmdBindDescriptorSets that violates VUID-vkCmdBindDescriptorSets-pDescriptorSets-01979");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    OneOffDescriptorSet descriptor_set(m_device,
+                                       {
+                                           {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_ALL, nullptr},
+                                       });
+
+    const VkPipelineLayoutObj pipeline_layout(m_device, {&descriptor_set.layout_});
+
+    // Create a buffer to update the descriptor with
+    uint32_t qfi = 0;
+    VkBufferCreateInfo buffCI = {};
+    buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffCI.size = 1024;
+    buffCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffCI.queueFamilyIndexCount = 1;
+    buffCI.pQueueFamilyIndices = &qfi;
+
+    VkBufferObj dynamic_uniform_buffer;
+    dynamic_uniform_buffer.init(*m_device, buffCI);
+
+    // Correctly update descriptor to avoid "NOT_UPDATED" error
+    descriptor_set.WriteDescriptorBufferInfo(0, dynamic_uniform_buffer.handle(), 1024, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+    descriptor_set.UpdateDescriptorSets();
+
+    m_commandBuffer->begin();
+    m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
+    vk::CmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout.handle(), 0, 1,
+                              &descriptor_set.set_, 0, NULL);
+    uint32_t pDynOff[] = {1024};
+    // Now cause an error due to an invalid dynamic offset
+    m_errorMonitor->SetDesiredFailureMsg(kErrorBit, " dynamic offset is invalid");
+    vk::CmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout.handle(), 0, 1,
+                              &descriptor_set.set_, 1, pDynOff);
     m_errorMonitor->VerifyFound();
 
     m_commandBuffer->EndRenderPass();

@@ -2050,6 +2050,17 @@ void cvdescriptorset::BufferDescriptor::UpdateDrawState(ValidationStateTracker *
     if (buffer_node) dev_data->AddCommandBufferBindingBuffer(cb_node, buffer_node);
 }
 
+bool cvdescriptorset::BufferDescriptor::IsOffsetValid(uint32_t offset, bool dynamic) const {
+    if (dynamic) {
+        // (ncesario) Based on https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/chap14.html#VUID-vkCmdBindDescriptorSets-pDescriptorSets-01979
+        //            it seems like this should be something like
+        //            (offset + offset_ + range_) < size_
+        //            but what would "size_" be?
+        return (offset + offset_) < range_;
+    }
+    return offset < range_;
+}
+
 cvdescriptorset::TexelDescriptor::TexelDescriptor(const VkDescriptorType type) : buffer_view_(VK_NULL_HANDLE), storage_(false) {
     updated = false;
     descriptor_class = TexelBuffer;
