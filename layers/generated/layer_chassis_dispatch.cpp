@@ -2577,14 +2577,15 @@ VkResult DispatchBeginCommandBuffer(
     safe_VkCommandBufferBeginInfo *local_pBeginInfo = NULL;
     {
         if (pBeginInfo) {
+            auto begin_info_sanitized = layer_data->SanitizeParameter(commandBuffer, *pBeginInfo);
             local_pBeginInfo = &var_local_pBeginInfo;
-            local_pBeginInfo->initialize(pBeginInfo);
+            local_pBeginInfo->initialize(&begin_info_sanitized);
             if (local_pBeginInfo->pInheritanceInfo) {
-                if (pBeginInfo->pInheritanceInfo->renderPass) {
-                    local_pBeginInfo->pInheritanceInfo->renderPass = layer_data->Unwrap(pBeginInfo->pInheritanceInfo->renderPass);
+                if (begin_info_sanitized.pInheritanceInfo->renderPass) {
+                    local_pBeginInfo->pInheritanceInfo->renderPass = layer_data->Unwrap(begin_info_sanitized.pInheritanceInfo->renderPass);
                 }
-                if (pBeginInfo->pInheritanceInfo->framebuffer) {
-                    local_pBeginInfo->pInheritanceInfo->framebuffer = layer_data->Unwrap(pBeginInfo->pInheritanceInfo->framebuffer);
+                if (begin_info_sanitized.pInheritanceInfo->framebuffer) {
+                    local_pBeginInfo->pInheritanceInfo->framebuffer = layer_data->Unwrap(begin_info_sanitized.pInheritanceInfo->framebuffer);
                 }
             }
         }

@@ -3101,6 +3101,28 @@ class ValidationObject {
             return LogMsgLocked(report_data, kInformationBit, single_object, vuid_text, str);
         };
 
+        VkCommandBufferBeginInfo SanitizeParameter(const VkCommandBuffer& command_buffer, const VkCommandBufferBeginInfo& param) {
+            auto sanitized = param;
+            if (sanitized.pInheritanceInfo && (VK_COMMAND_BUFFER_LEVEL_SECONDARY != command_buffer_allocation_map.at(command_buffer).level)) {
+                sanitized.pInheritanceInfo = nullptr;
+            }
+            return sanitized;
+        }
+
+        void StoreCommandBufferAllocationInfo(const VkCommandBufferAllocateInfo *pAllocateInfo, VkCommandBuffer *pCommandBuffers) {
+            if (pAllocateInfo) {
+                for (uint32_t i = 0; i < pAllocateInfo->commandBufferCount; ++i) {
+                    command_buffer_allocation_map.emplace(pCommandBuffers[i], CommandBufferAllocationInfo{pAllocateInfo->level});
+                }
+            }
+        }
+
+        // Command buffer information to save off for later validation
+        struct CommandBufferAllocationInfo {
+            VkCommandBufferLevel level;
+        };
+        std::unordered_map<VkCommandBuffer, CommandBufferAllocationInfo> command_buffer_allocation_map;
+
         // Handle Wrapping Data
         // Reverse map display handles
         vl_concurrent_unordered_map<VkDisplayKHR, uint64_t, 0> display_id_reverse_mapping;

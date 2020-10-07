@@ -1594,5 +1594,8 @@ class StatelessValidation : public ValidationObject {
                                                         const VkBuffer *pBuffers, const VkDeviceSize *pOffsets,
                                                         const VkDeviceSize *pSizes, const VkDeviceSize *pStrides) const;
 
+    void PostCallRecordAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAllocateInfo,
+                                              VkCommandBuffer *pCommandBuffers, VkResult result) final;
+
 #include "parameter_validation.h"
 };  // Class StatelessValidation

@@ -3258,6 +3258,12 @@ bool StatelessValidation::manual_PreCallValidateBeginCommandBuffer(VkCommandBuff
     // VkCommandBufferInheritanceInfo validation, due to a 'noautovalidity' of pBeginInfo->pInheritanceInfo in vkBeginCommandBuffer
     const char *cmd_name = "vkBeginCommandBuffer";
     const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
+    if (pInfo && VK_COMMAND_BUFFER_LEVEL_SECONDARY != command_buffer_allocation_map.at(commandBuffer).level) {
+        // If this is a primary buffer, pBeginInfo->pInheritanceInfo could be garbage data (i.e., a non-null value is not a
+        // pointer), so don't read anything from this pointer. See issue
+        // [#2195](https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2195)
+        pInfo = nullptr;
+    }
 
     // Implicit VUs
     // validate only sType here; pointer has to be validated in core_validation
@@ -5890,4 +5896,12 @@ bool StatelessValidation::manual_PreCallValidateCmdBindVertexBuffers2EXT(VkComma
     }
 
     return skip;
+}
+
+void StatelessValidation::PostCallRecordAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAllocateInfo,
+                                                               VkCommandBuffer *pCommandBuffers, VkResult result) {
+    // Parameter validation already occured
+    for (uint32_t i = 0; i < pAllocateInfo->commandBufferCount; ++i) {
+        command_buffer_allocation_map.emplace(pCommandBuffers[i], CommandBufferAllocationInfo{pAllocateInfo->level});
+    }
 }

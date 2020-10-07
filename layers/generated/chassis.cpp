@@ -2596,6 +2596,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateCommandBuffers(
         auto lock = intercept->write_lock();
         intercept->PostCallRecordAllocateCommandBuffers(device, pAllocateInfo, pCommandBuffers, result);
     }
+    layer_data->StoreCommandBufferAllocationInfo(pAllocateInfo, pCommandBuffers);
     return result;
 }
 
