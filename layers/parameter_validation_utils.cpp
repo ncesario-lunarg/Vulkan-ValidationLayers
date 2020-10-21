@@ -286,12 +286,31 @@ bool StatelessValidation::manual_PreCallValidateCreateDevice(VkPhysicalDevice ph
                                 "VUID-VkDeviceCreateInfo-ppEnabledLayerNames-parameter", pCreateInfo->ppEnabledLayerNames[i]);
     }
 
+    // If this device supports VK_KHR_portability_subset, it must be enabled
+    // TODO can validate_extension_reqs be used to do this? e.g., use in PostCallRecordEnumerateDeviceExtensionProperties check if
+    //      device supports portability and make the extension required if it does; maybe there is somewhere else this is done?
+    const std::string portability_extension_name("VK_KHR_portability_subset");
+    const auto &dev_extensions = device_extensions_enumerated.at(physicalDevice);
+    const bool portability_supported =
+        dev_extensions.count(portability_extension_name);  // TODO <- this is not reporting 'true' when expected
+    bool portability_requested = false;
+
     for (size_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         skip |=
             validate_string("vkCreateDevice", "pCreateInfo->ppEnabledExtensionNames",
                             "VUID-VkDeviceCreateInfo-ppEnabledExtensionNames-parameter", pCreateInfo->ppEnabledExtensionNames[i]);
         skip |= validate_extension_reqs(device_extensions, "VUID-vkCreateDevice-ppEnabledExtensionNames-01387", "device",
                                         pCreateInfo->ppEnabledExtensionNames[i]);
+        if (portability_extension_name == pCreateInfo->ppEnabledExtensionNames[i]) {
+            portability_requested = true;
+        }
+    }
+    if (portability_supported && !portability_requested) {
+        // The condition (!portability_supported && portability_requested) should be handled above
+        //   TODO: verify this
+        skip |= LogError(device, "VUID-VkDeviceCreateInfo-pProperties-04451",
+                         "VK_KHR_portability_subset must be enabled because physical device %s supports it",
+                         report_data->FormatHandle(physicalDevice).c_str());
     }
 
     {

@@ -10789,3 +10789,46 @@ TEST_F(VkLayerTest, ValidateExtendedDynamicStateEnabledNoMultiview) {
 
     commandBuffer.end();
 }
+
+TEST_F(VkLayerTest, ValidatePortabilityCreateDevice) {
+    TEST_DESCRIPTION("Portability: CreateDevice called and VK_KHR_portability_subset not enabled");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(m_errorMonitor));
+
+    bool portability_supported = DeviceExtensionSupported(gpu(), nullptr, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+    if (!portability_supported) {
+        printf("%s Test requires VK_KHR_portability_subset, skipping\n", kSkipPrefix);
+        return;
+    }
+
+    vk_testing::PhysicalDevice phys_device(gpu());
+
+    // request all queues
+    const std::vector<VkQueueFamilyProperties> queue_props = phys_device.queue_properties();
+    vk_testing::QueueCreateInfoArray queue_info(phys_device.queue_properties());
+
+    // Only request creation with queuefamilies that have at least one queue
+    std::vector<VkDeviceQueueCreateInfo> create_queue_infos;
+    auto qci = queue_info.data();
+    for (uint32_t j = 0; j < queue_info.size(); ++j) {
+        if (qci[j].queueCount) {
+            create_queue_infos.push_back(qci[j]);
+        }
+    }
+
+    VkDeviceCreateInfo dev_info = {};
+    dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    dev_info.pNext = nullptr;
+    dev_info.queueCreateInfoCount = create_queue_infos.size();
+    dev_info.pQueueCreateInfos = create_queue_infos.data();
+    dev_info.enabledLayerCount = 0;
+    dev_info.ppEnabledLayerNames = NULL;
+    dev_info.enabledExtensionCount = 0;
+    dev_info.ppEnabledExtensionNames =
+        nullptr;  // VK_KHR_portability_subset not included in enabled extensions should trigger 04451
+
+    m_errorMonitor->SetDesiredFailureMsg(kErrorBit, "VUID-VkDeviceCreateInfo-pProperties-04451");
+    VkDevice device;
+    vk::CreateDevice(gpu(), &dev_info, nullptr, &device);
+    m_errorMonitor->VerifyFound();
+}
