@@ -10832,3 +10832,29 @@ TEST_F(VkLayerTest, ValidatePortabilityCreateDevice) {
     vk::CreateDevice(gpu(), &dev_info, nullptr, &device);
     m_errorMonitor->VerifyFound();
 }
+
+TEST_F(VkLayerTest, PortabilityCreateEvent) {
+    TEST_DESCRIPTION("Portability: CreateEvent when not supported");
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework(m_errorMonitor));
+
+    bool portability_supported = DeviceExtensionSupported(gpu(), nullptr, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+    if (!portability_supported) {
+        printf("%s Test requires VK_KHR_portability_subset, skipping\n", kSkipPrefix);
+        return;
+    }
+    m_device_extension_names.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+
+    auto portability_feature = lvl_init_struct<VkPhysicalDevicePortabilitySubsetFeaturesKHR>();
+    auto features2 = lvl_init_struct<VkPhysicalDeviceFeatures2KHR>(&portability_feature);
+    vk::GetPhysicalDeviceFeatures2(gpu(), &features2);
+    portability_feature.events = VK_FALSE;  // Make sure events are disabled
+
+    ASSERT_NO_FATAL_FAILURE(InitState(nullptr, &features2));
+
+    m_errorMonitor->SetDesiredFailureMsg(kErrorBit, "VUID-vkCreateEvent-events-04468");
+    VkEventCreateInfo eci = {VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, nullptr, 0};
+    VkEvent event;
+    vk::CreateEvent(m_device->device(), &eci, nullptr, &event);
+    m_errorMonitor->VerifyFound();
+}
