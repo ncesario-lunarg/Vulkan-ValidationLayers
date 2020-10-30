@@ -349,6 +349,12 @@ class VkBufferTest {
     VkDeviceMemory VulkanMemory;
 };
 
+class VkPortabilitySubsetTest : public VkLayerTest {
+  public:
+    void InitPortabilitySubsetFramework();
+  protected:
+};
+
 struct CreatePipelineHelper;
 class VkVerticesObj {
   public:
