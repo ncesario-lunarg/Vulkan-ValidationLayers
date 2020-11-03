@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2015-2020 The Khronos Group Inc.
- * Copyright (c) 2015-2020 Valve Corporation
- * Copyright (c) 2015-2020 LunarG, Inc.
+ * Copyright (c) 2020 The Khronos Group Inc.
+ * Copyright (c) 2020 Valve Corporation
+ * Copyright (c) 2020 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
 #include "layer_validation_tests.h"
 
 void VkPortabilitySubsetTest::InitPortabilitySubsetFramework() {
-    // instance_layers_.clear();
-    // instance_layers_.emplace_back("VK_LAYER_KHRONOS_validation");
     instance_layers_.emplace_back("VK_LAYER_LUNARG_device_simulation");
-    app_info_.applicationVersion = VK_MAKE_VERSION(1, 1, 0);
-    app_info_.engineVersion = VK_MAKE_VERSION(1, 1, 0);
-    app_info_.apiVersion = VK_VERSION_1_1;
-    InitFramework(m_errorMonitor);
+
+    // VK_KHR_portability_subset dependencies
+    instance_extensions_.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
+    app_info_.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info_.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info_.apiVersion = VK_VERSION_1_0;
+    InitFramework(nullptr, nullptr, false);
 }
 
 TEST_F(VkPortabilitySubsetTest, ValidatePortabilityCreateDevice) {

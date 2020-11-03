@@ -423,22 +423,31 @@ VkInstanceCreateInfo VkRenderFramework::GetInstanceCreateInfo() const {
     };
 }
 
-void VkRenderFramework::InitFramework(void * /*unused compatibility parameter*/, void *instance_pnext) {
+void VkRenderFramework::InitFramework(void * /*unused compatibility parameter*/, void *instance_pnext, bool fail_on_missing) {
     ASSERT_EQ((VkInstance)0, instance_);
 
-    const auto LayerNotSupportedWithReporting = [](const char *layer) {
+    const auto LayerNotSupportedWithReporting = [fail_on_missing](const char *layer) {
         if (InstanceLayerSupported(layer))
             return false;
         else {
-            ADD_FAILURE() << "InitFramework(): Requested layer \"" << layer << "\" is not supported. It will be disabled.";
+            if (fail_on_missing) {
+                ADD_FAILURE() << "InitFramework(): Requested layer \"" << layer << "\" is not supported. It will be disabled.";
+            } else {
+                printf("InitFramework(): Requested layer \"%s\" is not supported. It will be disabled.\n", layer);
+            }
             return true;
         }
     };
-    const auto ExtensionNotSupportedWithReporting = [](const char *extension) {
+    const auto ExtensionNotSupportedWithReporting = [fail_on_missing](const char *extension) {
         if (InstanceExtensionSupported(extension))
             return false;
         else {
-            ADD_FAILURE() << "InitFramework(): Requested extension \"" << extension << "\" is not supported. It will be disabled.";
+            if (fail_on_missing) {
+                ADD_FAILURE() << "InitFramework(): Requested extension \"" << extension
+                              << "\" is not supported. It will be disabled.";
+            } else {
+                printf("InitFramework(): Requested extension \"%s\" is not supported. It will be disabled.\n", extension);
+            }
             return true;
         }
     };

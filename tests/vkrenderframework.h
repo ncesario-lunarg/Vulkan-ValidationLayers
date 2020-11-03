@@ -241,7 +241,7 @@ class VkRenderFramework : public VkTestFramework {
     static bool InstanceExtensionSupported(const char *extension_name, uint32_t spec_version = 0);
 
     VkInstanceCreateInfo GetInstanceCreateInfo() const;
-    void InitFramework(void * /*unused compatibility parameter*/ = NULL, void *instance_pnext = NULL);
+    void InitFramework(void * /*unused compatibility parameter*/ = NULL, void *instance_pnext = NULL, bool fail_on_missing = true);
     void ShutdownFramework();
 
     void InitViewport(float width, float height);
