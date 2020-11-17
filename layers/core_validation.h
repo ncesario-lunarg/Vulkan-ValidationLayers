@@ -32,36 +32,497 @@
 
 // Set of VUID that need to go between core_validation.cpp and drawdispatch.cpp
 struct DrawDispatchVuid {
-    const char* queue_flag;
-    const char* inside_renderpass;
-    const char* pipeline_bound;
-    const char* dynamic_state;
-    const char* vertex_binding;
-    const char* vertex_binding_null;
-    const char* compatible_pipeline;
-    const char* render_pass_compatible;
-    const char* subpass_index;
-    const char* sample_location;
-    const char* linear_sampler;
-    const char* cubic_sampler;
-    const char* indirect_protected_cb;
-    const char* indirect_contiguous_memory;
-    const char* indirect_buffer_bit;
-    const char* viewport_count;
-    const char* scissor_count;
-    const char* viewport_scissor_count;
-    const char* primitive_topology;
-    const char* corner_sampled_address_mode;
-    const char* subpass_input;  // It doesn't validate anything because those stuff have done in ValidateCreateGraphicsPipelines.
-    const char* imageview_atomic;
-    const char* push_constants_set;
-    const char* image_subresources;
-    const char* descriptor_valid;
-    const char* sampler_imageview_type;
-    const char* sampler_implicitLod_dref_proj;
-    const char* sampler_bias_offset;
-    const char* vertex_binding_attribute;
-    const char* dynamic_state_setting_commands;
+    const char* queue_flag = kVUIDUndefined;
+    const char* inside_renderpass = kVUIDUndefined;
+    const char* pipeline_bound = kVUIDUndefined;
+    const char* dynamic_state = kVUIDUndefined;
+    const char* vertex_binding = kVUIDUndefined;
+    const char* vertex_binding_null = kVUIDUndefined;
+    const char* compatible_pipeline = kVUIDUndefined;
+    const char* render_pass_compatible = kVUIDUndefined;
+    const char* subpass_index = kVUIDUndefined;
+    const char* sample_location = kVUIDUndefined;
+    const char* linear_sampler = kVUIDUndefined;
+    const char* cubic_sampler = kVUIDUndefined;
+    const char* indirect_protected_cb = kVUIDUndefined;
+    const char* indirect_contiguous_memory = kVUIDUndefined;
+    const char* indirect_buffer_bit = kVUIDUndefined;
+    const char* viewport_count = kVUIDUndefined;
+    const char* scissor_count = kVUIDUndefined;
+    const char* viewport_scissor_count = kVUIDUndefined;
+    const char* primitive_topology = kVUIDUndefined;
+    const char* corner_sampled_address_mode = kVUIDUndefined;
+    const char* subpass_input = kVUIDUndefined;  // It doesn't validate anything because those stuff have done in ValidateCreateGraphicsPipelines.
+    const char* imageview_atomic = kVUIDUndefined;
+    const char* push_constants_set = kVUIDUndefined;
+    const char* image_subresources = kVUIDUndefined;
+    const char* descriptor_valid = kVUIDUndefined;
+    const char* sampler_imageview_type = kVUIDUndefined;
+    const char* sampler_implicitLod_dref_proj = kVUIDUndefined;
+    const char* sampler_bias_offset = kVUIDUndefined;
+    const char* vertex_binding_attribute = kVUIDUndefined;
+    const char* dynamic_state_setting_commands = kVUIDUndefined;
+};
+
+struct DrawDispatchVuidDraw : DrawDispatchVuid {
+    DrawDispatchVuidDraw() : DrawDispatchVuid() {
+        queue_flag = "VUID-vkCmdDraw-commandBuffer-cmdpool";
+        inside_renderpass = "VUID-vkCmdDraw-renderpass";
+        pipeline_bound = "VUID-vkCmdDraw-None-02700";
+        dynamic_state = "VUID-vkCmdDraw-commandBuffer-02701";
+        vertex_binding = "VUID-vkCmdDraw-None-04007";
+        vertex_binding_null = "VUID-vkCmdDraw-None-04008";
+        compatible_pipeline = "VUID-vkCmdDraw-None-02697";
+        render_pass_compatible = "VUID-vkCmdDraw-renderPass-02684";
+        subpass_index = "VUID-vkCmdDraw-subpass-02685";
+        sample_location = "VUID-vkCmdDraw-sampleLocationsEnable-02689";
+        linear_sampler = "VUID-vkCmdDraw-magFilter-04553";
+        cubic_sampler = "VUID-vkCmdDraw-None-02692";
+        // indirect_protected_cb = kVUIDUnkVUIDUndefined; // indirect_protected_cb
+        // indirect_contiguous_memory = kVkVUIDUndefined; // indirect_contiguous_memory;
+        // indirect_buffer_bit = kVUIDUndekVUIDUndefined; // indirect_buffer_bit
+        viewport_count = "VUID-vkCmdDraw-viewportCount-03417";
+        scissor_count = "VUID-vkCmdDraw-scissorCount-03418";
+        viewport_scissor_count = "VUID-vkCmdDraw-viewportCount-03419";
+        primitive_topology = "VUID-vkCmdDraw-primitiveTopology-03420";
+        corner_sampled_address_mode = "VUID-vkCmdDraw-flags-02696";
+        subpass_input = "VUID-vkCmdDraw-None-02686";
+        imageview_atomic = "VUID-vkCmdDraw-None-02691";
+        push_constants_set = "VUID-vkCmdDraw-None-02698";
+        image_subresources = "VUID-vkCmdDraw-None-02687";
+        descriptor_valid = "VUID-vkCmdDraw-None-02699";
+        sampler_imageview_type = "VUID-vkCmdDraw-None-02702";
+        sampler_implicitLod_dref_proj = "VUID-vkCmdDraw-None-02703";
+        sampler_bias_offset = "VUID-vkCmdDraw-None-02704";
+        vertex_binding_attribute = "VUID-vkCmdDraw-None-02721";
+        dynamic_state_setting_commands = "VUID-vkCmdDraw-None-02859";
+    };
+};
+
+struct DrawDispatchVuidDrawIndexed : DrawDispatchVuid {
+    DrawDispatchVuidDrawIndexed() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawIndexed-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawIndexed-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawIndexed-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawIndexed-commandBuffer-02701";
+        vertex_binding                 = "VUID-vkCmdDrawIndexed-None-04007";
+        vertex_binding_null            = "VUID-vkCmdDrawIndexed-None-04008";
+        compatible_pipeline            = "VUID-vkCmdDrawIndexed-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawIndexed-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawIndexed-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawIndexed-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawIndexed-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawIndexed-None-02692";
+        // indirect_protected_cb          = kVUIDUndefined, // indirect_protected_cb
+        // indirect_contiguous_memory     = kVUIDUndefined, // indirect_contiguous_memory;
+        // indirect_buffer_bit            = kVUIDUndefined, // indirect_buffer_bit
+        viewport_count                 = "VUID-vkCmdDrawIndexed-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawIndexed-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawIndexed-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawIndexed-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawIndexed-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawIndexed-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawIndexed-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawIndexed-None-02698";
+        image_subresources             = "VUID-vkCmdDrawIndexed-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawIndexed-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawIndexed-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawIndexed-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawIndexed-None-02704";
+        vertex_binding_attribute       = "VUID-vkCmdDrawIndexed-None-02721";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawIndexed-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDrawIndirect : DrawDispatchVuid {
+    DrawDispatchVuidDrawIndirect() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawIndirect-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawIndirect-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawIndirect-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawIndirect-commandBuffer-02701";
+        vertex_binding                 = "VUID-vkCmdDrawIndirect-None-04007";
+        vertex_binding_null            = "VUID-vkCmdDrawIndirect-None-04008";
+        compatible_pipeline            = "VUID-vkCmdDrawIndirect-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawIndirect-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawIndirect-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawIndirect-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawIndirect-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawIndirect-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdDrawIndirect-commandBuffer-02711";
+        indirect_contiguous_memory     = "VUID-vkCmdDrawIndirect-buffer-02708";
+        indirect_buffer_bit            = "VUID-vkCmdDrawIndirect-buffer-02709";
+        viewport_count                 = "VUID-vkCmdDrawIndirect-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawIndirect-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawIndirect-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawIndirect-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawIndirect-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawIndirect-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawIndirect-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawIndirect-None-02698";
+        image_subresources             = "VUID-vkCmdDrawIndirect-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawIndirect-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawIndirect-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawIndirect-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawIndirect-None-02704";
+        vertex_binding_attribute       = "VUID-vkCmdDrawIndirect-None-02721";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawIndirect-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDrawIndexedIndirect : DrawDispatchVuid {
+    DrawDispatchVuidDrawIndexedIndirect() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawIndexedIndirect-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawIndexedIndirect-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawIndexedIndirect-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawIndexedIndirect-commandBuffer-02701";
+        vertex_binding                 = "VUID-vkCmdDrawIndexedIndirect-None-04007";
+        vertex_binding_null            = "VUID-vkCmdDrawIndexedIndirect-None-04008";
+        compatible_pipeline            = "VUID-vkCmdDrawIndexedIndirect-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawIndexedIndirect-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawIndexedIndirect-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawIndexedIndirect-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawIndexedIndirect-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawIndexedIndirect-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdDrawIndexedIndirect-commandBuffer-02711";
+        indirect_contiguous_memory     = "VUID-vkCmdDrawIndexedIndirect-buffer-02708";
+        indirect_buffer_bit            = "VUID-vkCmdDrawIndexedIndirect-buffer-02709";
+        viewport_count                 = "VUID-vkCmdDrawIndexedIndirect-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawIndexedIndirect-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawIndexedIndirect-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawIndexedIndirect-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawIndexedIndirect-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawIndexedIndirect-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawIndexedIndirect-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawIndexedIndirect-None-02698";
+        image_subresources             = "VUID-vkCmdDrawIndexedIndirect-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawIndexedIndirect-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawIndexedIndirect-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawIndexedIndirect-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawIndexedIndirect-None-02704";
+        vertex_binding_attribute       = "VUID-vkCmdDrawIndexedIndirect-None-02721";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawIndexedIndirect-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDispatch : DrawDispatchVuid {
+    DrawDispatchVuidDispatch() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDispatch-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDispatch-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDispatch-None-02700";
+        compatible_pipeline            = "VUID-vkCmdDispatch-None-02697";
+        linear_sampler                 = "VUID-vkCmdDispatch-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDispatch-None-02692";
+        corner_sampled_address_mode    = "VUID-vkCmdDispatch-flags-02696";
+        imageview_atomic               = "VUID-vkCmdDispatch-None-02691";
+        push_constants_set             = "VUID-vkCmdDispatch-None-02698";
+        descriptor_valid               = "VUID-vkCmdDispatch-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDispatch-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDispatch-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDispatch-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdDispatch-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDispatchIndirect : DrawDispatchVuid {
+    DrawDispatchVuidDispatchIndirect() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDispatchIndirect-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDispatchIndirect-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDispatchIndirect-None-02700";
+        compatible_pipeline            = "VUID-vkCmdDispatchIndirect-None-02697";
+        linear_sampler                 = "VUID-vkCmdDispatchIndirect-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDispatchIndirect-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdDispatchIndirect-commandBuffer-02711";
+        indirect_contiguous_memory     = "VUID-vkCmdDispatchIndirect-buffer-02708";
+        indirect_buffer_bit            = "VUID-vkCmdDispatchIndirect-buffer-02709";
+        corner_sampled_address_mode    = "VUID-vkCmdDispatchIndirect-flags-02696";
+        imageview_atomic               = "VUID-vkCmdDispatchIndirect-None-02691";
+        push_constants_set             = "VUID-vkCmdDispatchIndirect-None-02698";
+        descriptor_valid               = "VUID-vkCmdDispatchIndirect-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDispatchIndirect-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDispatchIndirect-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDispatchIndirect-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdDispatchIndirect-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDrawIndirectCount : DrawDispatchVuid {
+    DrawDispatchVuidDrawIndirectCount() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawIndirectCount-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawIndirectCount-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawIndirectCount-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawIndirectCount-commandBuffer-02701";
+        vertex_binding                 = "VUID-vkCmdDrawIndirectCount-None-04007";
+        vertex_binding_null            = "VUID-vkCmdDrawIndirectCount-None-04008";
+        compatible_pipeline            = "VUID-vkCmdDrawIndirectCount-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawIndirectCount-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawIndirectCount-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawIndirectCount-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawIndirectCount-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawIndirectCount-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdDrawIndirectCount-commandBuffer-02711";
+        indirect_contiguous_memory     = "VUID-vkCmdDrawIndirectCount-buffer-02708";
+        indirect_buffer_bit            = "VUID-vkCmdDrawIndirectCount-buffer-02709";
+        viewport_count                 = "VUID-vkCmdDrawIndirectCount-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawIndirectCount-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawIndirectCount-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawIndirectCount-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawIndirectCount-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawIndirectCount-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawIndirectCount-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawIndirectCount-None-02698";
+        image_subresources             = "VUID-vkCmdDrawIndirectCount-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawIndirectCount-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawIndirectCount-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawIndirectCount-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawIndirectCount-None-02704";
+        vertex_binding_attribute       = "VUID-vkCmdDrawIndirectCount-None-02721";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawIndirectCount-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDrawIndexedIndirectCount : DrawDispatchVuid {
+    DrawDispatchVuidDrawIndexedIndirectCount() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawIndexedIndirectCount-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawIndexedIndirectCount-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawIndexedIndirectCount-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawIndexedIndirectCount-commandBuffer-02701";
+        vertex_binding                 = "VUID-vkCmdDrawIndexedIndirectCount-None-04007";
+        vertex_binding_null            = "VUID-vkCmdDrawIndexedIndirectCount-None-04008";
+        compatible_pipeline            = "VUID-vkCmdDrawIndexedIndirectCount-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawIndexedIndirectCount-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawIndexedIndirectCount-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawIndexedIndirectCount-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawIndexedIndirectCount-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawIndexedIndirectCount-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdDrawIndexedIndirectCount-commandBuffer-02711";
+        indirect_contiguous_memory     = "VUID-vkCmdDrawIndexedIndirectCount-buffer-02708";
+        indirect_buffer_bit            = "VUID-vkCmdDrawIndexedIndirectCount-buffer-02709";
+        viewport_count                 = "VUID-vkCmdDrawIndexedIndirectCount-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawIndexedIndirectCount-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawIndexedIndirectCount-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawIndexedIndirectCount-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawIndexedIndirectCount-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawIndexedIndirectCount-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawIndexedIndirectCount-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawIndexedIndirectCount-None-02698";
+        image_subresources             = "VUID-vkCmdDrawIndexedIndirectCount-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawIndexedIndirectCount-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawIndexedIndirectCount-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawIndexedIndirectCount-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawIndexedIndirectCount-None-02704";
+        vertex_binding_attribute       = "VUID-vkCmdDrawIndexedIndirectCount-None-02721";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawIndexedIndirectCount-None-02859";
+    }
+};
+
+struct DrawDispatchVuidTraceRaysNV: DrawDispatchVuid {
+    DrawDispatchVuidTraceRaysNV() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdTraceRaysNV-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdTraceRaysNV-renderpass";
+        pipeline_bound                 = "VUID-vkCmdTraceRaysNV-None-02700";
+        dynamic_state                  = "VUID-vkCmdTraceRaysNV-commandBuffer-02701";
+        compatible_pipeline            = "VUID-vkCmdTraceRaysNV-None-02697";
+        linear_sampler                 = "VUID-vkCmdTraceRaysNV-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdTraceRaysNV-None-02692";
+        corner_sampled_address_mode    = "VUID-vkCmdTraceRaysNV-flags-02696";
+        imageview_atomic               = "VUID-vkCmdTraceRaysNV-None-02691";
+        push_constants_set             = "VUID-vkCmdTraceRaysNV-None-02698";
+        descriptor_valid               = "VUID-vkCmdTraceRaysNV-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdTraceRaysNV-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdTraceRaysNV-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdTraceRaysNV-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdTraceRaysNV-None-02859";
+    }
+};
+
+struct DrawDispatchVuidTraceRaysKHR: DrawDispatchVuid {
+    DrawDispatchVuidTraceRaysKHR() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdTraceRaysKHR-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdTraceRaysKHR-renderpass";
+        pipeline_bound                 = "VUID-vkCmdTraceRaysKHR-None-02700";
+        dynamic_state                  = "VUID-vkCmdTraceRaysKHR-commandBuffer-02701";
+        compatible_pipeline            = "VUID-vkCmdTraceRaysKHR-None-02697";
+        linear_sampler                 = "VUID-vkCmdTraceRaysKHR-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdTraceRaysKHR-None-02692";
+        corner_sampled_address_mode    = "VUID-vkCmdTraceRaysKHR-flags-02696";
+        imageview_atomic               = "VUID-vkCmdTraceRaysKHR-None-02691";
+		push_constants_set             = "VUID-vkCmdTraceRaysKHR-None-02698";
+        descriptor_valid               = "VUID-vkCmdTraceRaysKHR-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdTraceRaysKHR-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdTraceRaysKHR-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdTraceRaysKHR-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdTraceRaysKHR-None-02859";
+    }
+};
+
+struct DrawDispatchVuidTraceRaysIndirectKHR: DrawDispatchVuid {
+    DrawDispatchVuidTraceRaysIndirectKHR() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdTraceRaysIndirectKHR-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdTraceRaysIndirectKHR-renderpass";
+        pipeline_bound                 = "VUID-vkCmdTraceRaysIndirectKHR-None-02700";
+        dynamic_state                  = "VUID-vkCmdTraceRaysIndirectKHR-commandBuffer-02701";
+        compatible_pipeline            = "VUID-vkCmdTraceRaysIndirectKHR-None-02697";
+        linear_sampler                 = "VUID-vkCmdTraceRaysIndirectKHR-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdTraceRaysIndirectKHR-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdTraceRaysIndirectKHR-commandBuffer-02711";
+        indirect_contiguous_memory     = "VUID-vkCmdTraceRaysIndirectKHR-buffer-02708";
+        indirect_buffer_bit            = "VUID-vkCmdTraceRaysIndirectKHR-buffer-02709";
+        corner_sampled_address_mode    = "VUID-vkCmdTraceRaysIndirectKHR-flags-02696";
+        imageview_atomic               = "VUID-vkCmdTraceRaysIndirectKHR-None-02691";
+        push_constants_set             = "VUID-vkCmdTraceRaysIndirectKHR-None-02698";
+        descriptor_valid               = "VUID-vkCmdTraceRaysIndirectKHR-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdTraceRaysIndirectKHR-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdTraceRaysIndirectKHR-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdTraceRaysIndirectKHR-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdTraceRaysIndirectKHR-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDrawMeshTasksNV: DrawDispatchVuid {
+    DrawDispatchVuidDrawMeshTasksNV() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawMeshTasksNV-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawMeshTasksNV-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawMeshTasksNV-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawMeshTasksNV-commandBuffer-02701";
+        compatible_pipeline            = "VUID-vkCmdDrawMeshTasksNV-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawMeshTasksNV-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawMeshTasksNV-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawMeshTasksNV-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawMeshTasksNV-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawMeshTasksNV-None-02692";
+        viewport_count                 = "VUID-vkCmdDrawMeshTasksNV-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawMeshTasksNV-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawMeshTasksNV-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawMeshTasksNV-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawMeshTasksNV-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawMeshTasksNV-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawMeshTasksNV-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawMeshTasksNV-None-02698";
+        image_subresources             = "VUID-vkCmdDrawMeshTasksNV-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawMeshTasksNV-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawMeshTasksNV-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawMeshTasksNV-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawMeshTasksNV-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawMeshTasksNV-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDrawMeshTasksIndirectNV: DrawDispatchVuid {
+    DrawDispatchVuidDrawMeshTasksIndirectNV() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawMeshTasksIndirectNV-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawMeshTasksIndirectNV-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawMeshTasksIndirectNV-commandBuffer-02701";
+        compatible_pipeline            = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawMeshTasksIndirectNV-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawMeshTasksIndirectNV-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawMeshTasksIndirectNV-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawMeshTasksIndirectNV-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdDrawMeshTasksIndirectNV-commandBuffer-02711";
+        indirect_contiguous_memory     = "VUID-vkCmdDrawMeshTasksIndirectNV-buffer-02708";
+        indirect_buffer_bit            = "VUID-vkCmdDrawMeshTasksIndirectNV-buffer-02709";
+        viewport_count                 = "VUID-vkCmdDrawMeshTasksIndirectNV-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawMeshTasksIndirectNV-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawMeshTasksIndirectNV-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawMeshTasksIndirectNV-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawMeshTasksIndirectNV-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02698";
+        image_subresources             = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawMeshTasksIndirectNV-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDrawMeshTasksIndirectCountNV : DrawDispatchVuid {
+    DrawDispatchVuidDrawMeshTasksIndirectCountNV() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawMeshTasksIndirectCountNV-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawMeshTasksIndirectCountNV-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawMeshTasksIndirectCountNV-commandBuffer-02701";
+        compatible_pipeline            = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawMeshTasksIndirectCountNV-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawMeshTasksIndirectCountNV-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawMeshTasksIndirectCountNV-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawMeshTasksIndirectCountNV-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdDrawMeshTasksIndirectCountNV-commandBuffer-02711";
+        indirect_contiguous_memory     = "VUID-vkCmdDrawMeshTasksIndirectCountNV-buffer-02708";
+        indirect_buffer_bit            = "VUID-vkCmdDrawMeshTasksIndirectCountNV-buffer-02709";
+        viewport_count                 = "VUID-vkCmdDrawMeshTasksIndirectCountNV-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawMeshTasksIndirectCountNV-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawMeshTasksIndirectCountNV-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawMeshTasksIndirectCountNV-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawMeshTasksIndirectCountNV-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02698";
+        image_subresources             = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawMeshTasksIndirectCountNV-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDrawIndirectByteCountEXT: DrawDispatchVuid {
+    DrawDispatchVuidDrawIndirectByteCountEXT() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDrawIndirectByteCountEXT-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDrawIndirectByteCountEXT-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDrawIndirectByteCountEXT-None-02700";
+        dynamic_state                  = "VUID-vkCmdDrawIndirectByteCountEXT-commandBuffer-02701";
+        vertex_binding                 = "VUID-vkCmdDrawIndirectByteCountEXT-None-04007";
+        vertex_binding_null            = "VUID-vkCmdDrawIndirectByteCountEXT-None-04008";
+        compatible_pipeline            = "VUID-vkCmdDrawIndirectByteCountEXT-None-02697";
+        render_pass_compatible         = "VUID-vkCmdDrawIndirectByteCountEXT-renderPass-02684";
+        subpass_index                  = "VUID-vkCmdDrawIndirectByteCountEXT-subpass-02685";
+        sample_location                = "VUID-vkCmdDrawIndirectByteCountEXT-sampleLocationsEnable-02689";
+        linear_sampler                 = "VUID-vkCmdDrawIndirectByteCountEXT-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDrawIndirectByteCountEXT-None-02692";
+        indirect_protected_cb          = "VUID-vkCmdDrawIndirectByteCountEXT-commandBuffer-02646";
+        indirect_contiguous_memory     = "UNASSIGNED-vkCmdDrawIndirectByteCountEXT-buffer", // TODO - Update when header are updated
+        indirect_buffer_bit            = "VUID-vkCmdDrawIndirectByteCountEXT-buffer-02290";
+        viewport_count                 = "VUID-vkCmdDrawIndirectByteCountEXT-viewportCount-03417";
+        scissor_count                  = "VUID-vkCmdDrawIndirectByteCountEXT-scissorCount-03418";
+        viewport_scissor_count         = "VUID-vkCmdDrawIndirectByteCountEXT-viewportCount-03419";
+        primitive_topology             = "VUID-vkCmdDrawIndirectByteCountEXT-primitiveTopology-03420";
+        corner_sampled_address_mode    = "VUID-vkCmdDrawIndirectByteCountEXT-flags-02696";
+        subpass_input                  = "VUID-vkCmdDrawIndirectByteCountEXT-None-02686";
+        imageview_atomic               = "VUID-vkCmdDrawIndirectByteCountEXT-None-02691";
+        push_constants_set             = "VUID-vkCmdDrawIndirectByteCountEXT-None-02698";
+        image_subresources             = "VUID-vkCmdDrawIndirectByteCountEXT-None-02687";
+        descriptor_valid               = "VUID-vkCmdDrawIndirectByteCountEXT-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDrawIndirectByteCountEXT-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDrawIndirectByteCountEXT-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDrawIndirectByteCountEXT-None-02704";
+        vertex_binding_attribute       = "VUID-vkCmdDrawIndirectByteCountEXT-None-02721";
+        dynamic_state_setting_commands = "VUID-vkCmdDrawIndirectByteCountEXT-None-02859";
+    }
+};
+
+struct DrawDispatchVuidDispatchBase: DrawDispatchVuid {
+    DrawDispatchVuidDispatchBase() : DrawDispatchVuid() {
+        queue_flag                     = "VUID-vkCmdDispatchBase-commandBuffer-cmdpool";
+        inside_renderpass              = "VUID-vkCmdDispatchBase-renderpass";
+        pipeline_bound                 = "VUID-vkCmdDispatchBase-None-02700";
+        compatible_pipeline            = "VUID-vkCmdDispatchBase-None-02697";
+        linear_sampler                 = "VUID-vkCmdDispatchBase-magFilter-04553";
+        cubic_sampler                  = "VUID-vkCmdDispatchBase-None-02692";
+        corner_sampled_address_mode    = "VUID-vkCmdDispatchBase-flags-02696";
+        imageview_atomic               = "VUID-vkCmdDispatchBase-None-02691";
+        push_constants_set             = "VUID-vkCmdDispatchBase-None-02698";
+        descriptor_valid               = "VUID-vkCmdDispatchBase-None-02699";
+        sampler_imageview_type         = "VUID-vkCmdDispatchBase-None-02702";
+        sampler_implicitLod_dref_proj  = "VUID-vkCmdDispatchBase-None-02703";
+        sampler_bias_offset            = "VUID-vkCmdDispatchBase-None-02704";
+        dynamic_state_setting_commands = "VUID-vkCmdDispatchBase-None-02859";
+    }
 };
 
 typedef struct {
