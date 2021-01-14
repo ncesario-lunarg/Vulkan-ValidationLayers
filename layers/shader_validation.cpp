@@ -619,14 +619,14 @@ static uint32_t GetShaderStageId(VkShaderStageFlagBits stage) {
     return bit_pos - 1;
 }
 
-static spirv_inst_iter GetStructType(SHADER_MODULE_STATE const *src, spirv_inst_iter def, bool is_array_of_verts) {
+static spirv_inst_iter GetBaseType(SHADER_MODULE_STATE const *src, spirv_inst_iter def, bool is_array_of_verts) {
     while (true) {
         if (def.opcode() == spv::OpTypePointer) {
             def = src->get_def(def.word(3));
         } else if (def.opcode() == spv::OpTypeArray && is_array_of_verts) {
             def = src->get_def(def.word(2));
             is_array_of_verts = false;
-        } else if (def.opcode() == spv::OpTypeStruct) {
+        } else if ((def.opcode() == spv::OpTypeStruct) || (def.opcode() == spv::OpTypeVector)) {
             return def;
         } else {
             return src->end();
@@ -638,7 +638,7 @@ static bool CollectInterfaceBlockMembers(SHADER_MODULE_STATE const *src, std::ma
                                          bool is_array_of_verts, uint32_t id, uint32_t type_id, bool is_patch,
                                          int /*first_location*/) {
     // Walk down the type_id presented, trying to determine whether it's actually an interface block.
-    auto type = GetStructType(src, src->get_def(type_id), is_array_of_verts && !is_patch);
+    auto type = GetBaseType(src, src->get_def(type_id), is_array_of_verts && !is_patch);
     if (type == src->end() || !(src->get_decorations(type.word(1)).flags & decoration_set::block_bit)) {
         // This isn't an interface block.
         return false;
@@ -1254,76 +1254,122 @@ std::vector<std::pair<descriptor_slot_t, interface_var>> CollectInterfaceByDescr
     return out;
 }
 
-void DefineStructMember(const SHADER_MODULE_STATE &src, const spirv_inst_iter &it,
-                        const std::vector<uint32_t> &memberDecorate_offsets, shader_struct_member &data) {
-    const auto struct_it = GetStructType(&src, it, false);
-    assert(struct_it != src.end());
-    data.size = 0;
-
-    shader_struct_member data1;
-    uint32_t i = 2;
-    uint32_t local_offset = 0;
-    std::vector<uint32_t> offsets;
-    offsets.resize(struct_it.len() - i);
-
-    // The members of struct in SPRIV_R aren't always sort, so we need to know their order.
-    for (const auto offset : memberDecorate_offsets) {
-        const auto member_decorate = src.at(offset);
-        if (member_decorate.word(1) != struct_it.word(1)) {
-            continue;
-        }
-
-        offsets[member_decorate.word(2)] = member_decorate.word(4);
+void DefineVectorType(const SHADER_MODULE_STATE &src, const spirv_inst_iter &it,
+                      const std::vector<uint32_t> &memberDecorate_offsets, shader_struct_member &data) {
+    shader_struct_member data1 = {};
+    data1.root = data.root;
+    data1.offset = 0;
+    auto scalar_def = it;
+    if (it.opcode() == spv::OpTypeMatrix) {
+        data1.array_length_hierarchy.emplace_back(it.word(3));  // matrix's columns. matrix's row is vector.
+        scalar_def = src.get_def(it.word(2));
+    }
+    if (it.opcode() == spv::OpTypeVector) {
+        data1.array_length_hierarchy.emplace_back(it.word(3));  // vector length
+        scalar_def = src.get_def(it.word(2));
     }
 
-    for (const auto offset : offsets) {
-        local_offset = offset;
-        data1 = {};
-        data1.root = data.root;
-        data1.offset = local_offset;
-        auto def_member = src.get_def(struct_it.word(i));
-
-        // Array could be multi-dimensional
-        while (def_member.opcode() == spv::OpTypeArray) {
-            const auto len_id = def_member.word(3);
-            const auto def_len = src.get_def(len_id);
-            data1.array_length_hierarchy.emplace_back(def_len.word(3));  // array length
-            def_member = src.get_def(def_member.word(2));
-        }
-
-        if (def_member.opcode() == spv::OpTypeStruct || def_member.opcode() == spv::OpTypePointer) {
-            // If it's OpTypePointer. it means the member is a buffer, the type will be TypePointer, and then struct
-            DefineStructMember(src, def_member, memberDecorate_offsets, data1);
-        } else {
-            if (def_member.opcode() == spv::OpTypeMatrix) {
-                data1.array_length_hierarchy.emplace_back(def_member.word(3));  // matrix's columns. matrix's row is vector.
-                def_member = src.get_def(def_member.word(2));
-            }
-
-            if (def_member.opcode() == spv::OpTypeVector) {
-                data1.array_length_hierarchy.emplace_back(def_member.word(3));  // vector length
-                def_member = src.get_def(def_member.word(2));
-            }
-
-            // Get scalar type size. The value in SPRV-R is bit. It needs to translate to byte.
-            data1.size = (def_member.word(2) / 8);
-        }
-        const auto array_length_hierarchy_szie = data1.array_length_hierarchy.size();
-        if (array_length_hierarchy_szie > 0) {
-            data1.array_block_size.resize(array_length_hierarchy_szie, 1);
-
-            for (int i2 = static_cast<int>(array_length_hierarchy_szie - 1); i2 > 0; --i2) {
-                data1.array_block_size[i2 - 1] = data1.array_length_hierarchy[i2] * data1.array_block_size[i2];
-            }
-        }
-        data.struct_members.emplace_back(data1);
-        ++i;
+    if (scalar_def == it) {
+        // TODO error?
     }
+    data1.size = (scalar_def.word(2) / 8);
+
+    if (data1.array_length_hierarchy.size() > 0) {
+        data1.array_block_size.resize(data1.array_length_hierarchy.size(), 1);
+        for (int i = static_cast<int>(data1.array_length_hierarchy.size() - 1); i > 0; --i) {
+            data1.array_block_size[i - 1] = data1.array_length_hierarchy[i] * data1.array_block_size[i];
+        }
+    }
+    data.struct_members.emplace_back(data1);
+
     uint32_t total_array_length = 1;
     for (const auto length : data1.array_length_hierarchy) {
         total_array_length *= length;
     }
-    data.size = local_offset + data1.size * total_array_length;
+    data.size = data1.size * total_array_length;
+}
+
+void DefineStructMember(const SHADER_MODULE_STATE &src, const spirv_inst_iter &it,
+                        const std::vector<uint32_t> &memberDecorate_offsets, shader_struct_member &data) {
+    const auto struct_it = GetBaseType(&src, it, false);
+    assert(struct_it != src.end());
+    data.size = 0;
+
+    if (struct_it.opcode() == spv::OpTypeStruct) {
+        shader_struct_member data1;
+        uint32_t i = 2;
+        uint32_t local_offset = 0;
+        std::vector<uint32_t> offsets;
+        offsets.resize(struct_it.len() - i);
+
+        // The members of struct in SPRIV_R aren't always sort, so we need to know their order.
+        for (const auto offset : memberDecorate_offsets) {
+            const auto member_decorate = src.at(offset);
+            if (member_decorate.word(1) != struct_it.word(1)) {
+                continue;
+            }
+
+            offsets[member_decorate.word(2)] = member_decorate.word(4);
+        }
+
+        for (const auto offset : offsets) {
+            local_offset = offset;
+            data1 = {};
+            data1.root = data.root;
+            data1.offset = local_offset;
+            auto def_member = src.get_def(struct_it.word(i));
+
+            // Array could be multi-dimensional
+            while (def_member.opcode() == spv::OpTypeArray) {
+                const auto len_id = def_member.word(3);
+                const auto def_len = src.get_def(len_id);
+                data1.array_length_hierarchy.emplace_back(def_len.word(3));  // array length
+                def_member = src.get_def(def_member.word(2));
+            }
+
+            if (def_member.opcode() == spv::OpTypeStruct) {
+                DefineStructMember(src, def_member, memberDecorate_offsets, data1);
+            } else if (def_member.opcode() == spv::OpTypePointer) {
+                if (def_member.word(2) == spv::StorageClassPhysicalStorageBuffer) {
+                    // If it's a pointer with PhysicalStorage, this member is essentially a "pointer" with size 8
+                    data1.size = 8;
+                } else {
+                    // If it's OpTypePointer. it means the member is a buffer, the type will be TypePointer, and then struct
+                    DefineStructMember(src, def_member, memberDecorate_offsets, data1);
+                }
+            } else {
+                if (def_member.opcode() == spv::OpTypeMatrix) {
+                    data1.array_length_hierarchy.emplace_back(def_member.word(3));  // matrix's columns. matrix's row is vector.
+                    def_member = src.get_def(def_member.word(2));
+                }
+
+                if (def_member.opcode() == spv::OpTypeVector) {
+                    data1.array_length_hierarchy.emplace_back(def_member.word(3));  // vector length
+                    def_member = src.get_def(def_member.word(2));
+                }
+
+                // Get scalar type size. The value in SPRV-R is bit. It needs to translate to byte.
+                data1.size = (def_member.word(2) / 8);
+            }
+            const auto array_length_hierarchy_szie = data1.array_length_hierarchy.size();
+            if (array_length_hierarchy_szie > 0) {
+                data1.array_block_size.resize(array_length_hierarchy_szie, 1);
+
+                for (int i2 = static_cast<int>(array_length_hierarchy_szie - 1); i2 > 0; --i2) {
+                    data1.array_block_size[i2 - 1] = data1.array_length_hierarchy[i2] * data1.array_block_size[i2];
+                }
+            }
+            data.struct_members.emplace_back(data1);
+            ++i;
+        }
+        uint32_t total_array_length = 1;
+        for (const auto length : data1.array_length_hierarchy) {
+            total_array_length *= length;
+        }
+        data.size = local_offset + data1.size * total_array_length;
+    } else {
+        DefineVectorType(src, struct_it, memberDecorate_offsets, data);
+    }
 }
 
 uint32_t UpdateOffset(uint32_t offset, const std::vector<uint32_t> &array_indices, const shader_struct_member &data) {

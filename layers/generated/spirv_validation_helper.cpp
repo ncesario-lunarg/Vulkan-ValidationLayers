@@ -303,6 +303,9 @@ static const std::unordered_multimap<std::string, RequiredSpirvInfo> spirvExtens
     {"SPV_NV_shader_subgroup_partitioned", {0, nullptr, &DeviceExtensions::vk_nv_shader_subgroup_partitioned, ""}},
     {"SPV_NV_shading_rate", {0, nullptr, &DeviceExtensions::vk_nv_shading_rate_image, ""}},
     {"SPV_NV_viewport_array2", {0, nullptr, &DeviceExtensions::vk_nv_viewport_array2, ""}},
+
+    // HACK!!
+    {"GL_EXT_scalar_block_layout", {0, nullptr, &DeviceExtensions::vk_ext_scalar_block_layout, ""}},
 };
 // clang-format on
 

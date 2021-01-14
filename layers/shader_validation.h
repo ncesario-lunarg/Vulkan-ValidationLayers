@@ -45,7 +45,7 @@ struct spirv_inst_iter {
         return result;
     }
 
-    uint32_t opcode() { return *it & 0x0ffffu; }
+    uint32_t opcode() const { return *it & 0x0ffffu; }
 
     uint32_t const &word(unsigned n) const {
         assert(n < len());

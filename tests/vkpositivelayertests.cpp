@@ -10839,3 +10839,269 @@ TEST_F(VkPositiveLayerTest, AndroidHardwareBufferExportImage) {
 }
 
 #endif  // AHB_VALIDATION_SUPPORT
+
+TEST_F(VkPositiveLayerTest, ShaderHang) {
+    // This is a positive test, no errors expected
+    // Verifies the ability to relax block layout rules with a shader that requires them to be relaxed
+    TEST_DESCRIPTION("Reproduce shader hang fom GH issue #2465.");
+
+    app_info_.apiVersion = VK_API_VERSION_1_2;
+    // m_target_api_version = VK_VERSION_1_2;
+    // m_instance_api_version = VK_VERSION_1_2;
+    ASSERT_NO_FATAL_FAILURE(InitFramework(m_errorMonitor));
+
+    if (DeviceExtensionSupported(gpu(), nullptr, "VK_KHR_buffer_device_address")) {
+        m_device_extension_names.push_back("VK_KHR_buffer_device_address");
+    } else {
+        return;
+    }
+    if (DeviceExtensionSupported(gpu(), nullptr, "VK_KHR_shader_non_semantic_info")) {
+        m_device_extension_names.push_back("VK_KHR_shader_non_semantic_info");
+    } else {
+        return;
+    }
+    if (DeviceExtensionSupported(gpu(), nullptr, "VK_EXT_scalar_block_layout")) {
+        m_device_extension_names.push_back("VK_EXT_scalar_block_layout");
+    } else {
+        return;
+    }
+
+    auto features12 = LvlInitStruct<VkPhysicalDeviceVulkan12Features>();
+    auto features2 = LvlInitStruct<VkPhysicalDeviceFeatures2>(&features12);
+    vk::GetPhysicalDeviceFeatures2(gpu(), &features2);
+
+    if (VK_TRUE != features12.bufferDeviceAddress) {
+        return;
+    }
+
+    // The Relaxed Block Layout extension was promoted to core in 1.1.
+    // Go ahead and check for it and turn it on in case a 1.0 device has it.
+    // if (!DeviceExtensionSupported(gpu(), nullptr, VK_KHR_RELAXED_BLOCK_LAYOUT_EXTENSION_NAME)) {
+    //     printf("%s Extension %s not supported, skipping this pass. \n", kSkipPrefix, VK_KHR_RELAXED_BLOCK_LAYOUT_EXTENSION_NAME);
+    //     return;
+    // }
+    // m_device_extension_names.push_back(VK_KHR_RELAXED_BLOCK_LAYOUT_EXTENSION_NAME);
+    ASSERT_NO_FATAL_FAILURE(InitState(nullptr, &features2));
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const std::string spv_source = R"glsl(
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos; 0
+; Bound: 59
+; Schema: 0
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "GL_EXT_scalar_block_layout"
+               OpExtension "SPV_KHR_physical_storage_buffer"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %_Z16transform_shaderI16transform_push_tIZ4mainEUliE_EEvv "_Z16transform_shaderI16transform_push_tIZ4mainEUliE_EEvv" %glcomp_GlobalInvocationID %_Z11shader_pushI16transform_push_tIZ4mainEUliE_EE
+               OpExecutionMode %_Z16transform_shaderI16transform_push_tIZ4mainEUliE_EEvv LocalSize 256 1 1
+               OpName %glcomp_GlobalInvocationID "glcomp_GlobalInvocationID"
+               OpName %lambda_void_int__const "lambda void(int) const"
+               OpName %transform_push_t_lambda_void_int__const_ "transform_push_t<lambda void(int) const>"
+               OpMemberName %transform_push_t_lambda_void_int__const_ 0 "count"
+               OpMemberName %transform_push_t_lambda_void_int__const_ 1 "closure"
+               OpName %_Z11shader_pushI16transform_push_tIZ4mainEUliE_EE "_Z11shader_pushI16transform_push_tIZ4mainEUliE_EE"
+               OpName %_Z16transform_shaderI16transform_push_tIZ4mainEUliE_EEvv "_Z16transform_shaderI16transform_push_tIZ4mainEUliE_EEvv"
+               OpDecorate %glcomp_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpDecorate %_ptr_PhysicalStorageBuffer_v3float ArrayStride 12
+               OpMemberDecorate %lambda_void_int__const 0 Offset 0
+               OpMemberDecorate %transform_push_t_lambda_void_int__const_ 0 Offset 0
+               OpMemberDecorate %transform_push_t_lambda_void_int__const_ 1 Offset 8
+               OpDecorate %_struct_12 Block
+               OpMemberDecorate %_struct_12 0 Offset 0
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%glcomp_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+        %int = OpTypeInt 32 1
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%_ptr_PhysicalStorageBuffer_v3float = OpTypePointer PhysicalStorageBuffer %v3float
+%lambda_void_int__const = OpTypeStruct %_ptr_PhysicalStorageBuffer_v3float
+%transform_push_t_lambda_void_int__const_ = OpTypeStruct %int %lambda_void_int__const
+ %_struct_12 = OpTypeStruct %transform_push_t_lambda_void_int__const_
+%_ptr_PushConstant__struct_12 = OpTypePointer PushConstant %_struct_12
+%_Z11shader_pushI16transform_push_tIZ4mainEUliE_EE = OpVariable %_ptr_PushConstant__struct_12 PushConstant
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+%_ptr_Function_int = OpTypePointer Function %int
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+      %int_0 = OpConstant %int 0
+%_ptr_PushConstant_transform_push_t_lambda_void_int__const_ = OpTypePointer PushConstant %transform_push_t_lambda_void_int__const_
+%_ptr_PushConstant_int = OpTypePointer PushConstant %int
+       %bool = OpTypeBool
+%_ptr_PushConstant_lambda_void_int__const = OpTypePointer PushConstant %lambda_void_int__const
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+         %52 = OpConstantComposite %v3float %float_0 %float_1 %float_2
+%_ptr_PushConstant__ptr_PhysicalStorageBuffer_v3float = OpTypePointer PushConstant %_ptr_PhysicalStorageBuffer_v3float
+%_Z16transform_shaderI16transform_push_tIZ4mainEUliE_EEvv = OpFunction %void None %16
+         %17 = OpLabel
+         %19 = OpVariable %_ptr_Function_int Function
+         %20 = OpVariable %_ptr_Function_int Function
+               OpSelectionMerge %22 None
+               OpSwitch %uint_0 %23
+         %23 = OpLabel
+         %26 = OpAccessChain %_ptr_Input_uint %glcomp_GlobalInvocationID %int_0
+         %27 = OpLoad %uint %26
+         %28 = OpBitcast %int %27
+               OpStore %20 %28
+         %29 = OpLoad %int %20
+         %31 = OpAccessChain %_ptr_PushConstant_transform_push_t_lambda_void_int__const_ %_Z11shader_pushI16transform_push_tIZ4mainEUliE_EE %int_0
+         %33 = OpAccessChain %_ptr_PushConstant_int %31 %int_0
+         %34 = OpLoad %int %33
+         %36 = OpSGreaterThanEqual %bool %29 %34
+               OpSelectionMerge %37 None
+               OpBranchConditional %36 %38 %37
+         %38 = OpLabel
+               OpBranch %22
+         %37 = OpLabel
+         %39 = OpAccessChain %_ptr_PushConstant_transform_push_t_lambda_void_int__const_ %_Z11shader_pushI16transform_push_tIZ4mainEUliE_EE %int_0
+         %42 = OpAccessChain %_ptr_PushConstant_lambda_void_int__const %39 %int_1
+         %43 = OpLoad %int %20
+               OpStore %19 %43
+         %44 = OpLoad %int %19
+         %46 = OpIMul %int %int_3 %44
+         %47 = OpConvertSToF %float %46
+         %48 = OpCompositeConstruct %v3float %47 %47 %47
+         %53 = OpFAdd %v3float %48 %52
+         %55 = OpAccessChain %_ptr_PushConstant__ptr_PhysicalStorageBuffer_v3float %42 %int_0
+         %56 = OpLoad %_ptr_PhysicalStorageBuffer_v3float %55
+         %57 = OpLoad %int %19
+         %58 = OpPtrAccessChain %_ptr_PhysicalStorageBuffer_v3float %56 %57
+               OpStore %58 %53 Aligned 4
+               OpBranch %22
+         %22 = OpLabel
+               OpReturn
+               OpFunctionEnd
+        )glsl";
+    m_errorMonitor->ExpectSuccess();
+
+    VkPushConstantRange push_constant_ranges[1]{{VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float) * 16}};
+
+    VkPipelineLayoutCreateInfo const pipeline_layout_info{
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 0, nullptr, 1, push_constant_ranges};
+
+    CreateComputePipelineHelper pipe(*this);
+    pipe.InitInfo();
+    pipe.cs_.reset(new VkShaderObj(m_device, spv_source, VK_SHADER_STAGE_COMPUTE_BIT, this,
+                                   "_Z16transform_shaderI16transform_push_tIZ4mainEUliE_EEvv", nullptr, SPV_ENV_UNIVERSAL_1_5));
+    pipe.pipeline_layout_ci_ = pipeline_layout_info;
+    pipe.InitState();
+    m_errorMonitor->ExpectSuccess();
+    pipe.CreateComputePipeline();
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, PhysicalStorageBuffer) {
+    // This is a positive test, no errors expected
+    // Verifies the ability to relax block layout rules with a shader that requires them to be relaxed
+    TEST_DESCRIPTION("Reproduce GH issue #2467.");
+
+    app_info_.apiVersion = VK_API_VERSION_1_2;
+    ASSERT_NO_FATAL_FAILURE(InitFramework(m_errorMonitor));
+
+    if (DeviceExtensionSupported(gpu(), nullptr, "VK_EXT_buffer_device_address")) {
+        m_device_extension_names.push_back("VK_EXT_buffer_device_address");
+    } else {
+        return;
+    }
+    if (DeviceExtensionSupported(gpu(), nullptr, "VK_KHR_shader_non_semantic_info")) {
+        m_device_extension_names.push_back("VK_KHR_shader_non_semantic_info");
+    } else {
+        return;
+    }
+    if (DeviceExtensionSupported(gpu(), nullptr, "VK_EXT_scalar_block_layout")) {
+        m_device_extension_names.push_back("VK_EXT_scalar_block_layout");
+    } else {
+        return;
+    }
+
+    auto features12 = LvlInitStruct<VkPhysicalDeviceVulkan12Features>();
+    auto features2 = LvlInitStruct<VkPhysicalDeviceFeatures2>(&features12);
+    vk::GetPhysicalDeviceFeatures2(gpu(), &features2);
+
+    if (VK_TRUE != features12.bufferDeviceAddress) {
+        return;
+    }
+
+    // The Relaxed Block Layout extension was promoted to core in 1.1.
+    // Go ahead and check for it and turn it on in case a 1.0 device has it.
+    // if (!DeviceExtensionSupported(gpu(), nullptr, VK_KHR_RELAXED_BLOCK_LAYOUT_EXTENSION_NAME)) {
+    //     printf("%s Extension %s not supported, skipping this pass. \n", kSkipPrefix, VK_KHR_RELAXED_BLOCK_LAYOUT_EXTENSION_NAME);
+    //     return;
+    // }
+    // m_device_extension_names.push_back(VK_KHR_RELAXED_BLOCK_LAYOUT_EXTENSION_NAME);
+    ASSERT_NO_FATAL_FAILURE(InitState(nullptr, &features2));
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const char* vertex_source = R"glsl(
+#version 450
+
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_scalar_block_layout : enable
+
+layout(buffer_reference, buffer_reference_align=16, scalar) readonly buffer VectorBuffer {
+  vec3 v;
+};
+
+layout(push_constant, scalar) uniform pc {
+  VectorBuffer vb;
+} pcs;
+
+void main() {
+    gl_Position = vec4(pcs.vb.v, 1.0);
+}
+        )glsl";
+    const VkShaderObj vs(m_device, vertex_source, VK_SHADER_STAGE_VERTEX_BIT, this);
+
+    const char* fragment_source = R"glsl(
+#version 450
+
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_scalar_block_layout : enable
+
+layout(buffer_reference, buffer_reference_align=16, scalar) readonly buffer VectorBuffer {
+  vec3 v;
+};
+  
+layout(push_constant, scalar) uniform pushConstants {
+  layout(offset=8)
+  VectorBuffer vb;
+} pcs;
+
+layout(location=0) out vec4 o;
+void main() {
+    o = vec4(pcs.vb.v, 1.0);
+}
+    )glsl";
+    const VkShaderObj fs(m_device, fragment_source, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    m_errorMonitor->ExpectSuccess();
+
+    std::array<VkPushConstantRange, 2> push_ranges;
+    push_ranges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_ranges[0].size       = sizeof(uint64_t);
+    push_ranges[0].offset     = 0;
+    push_ranges[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_ranges[1].size       = sizeof(uint64_t);
+    push_ranges[1].offset     = sizeof(uint64_t);
+
+    VkPipelineLayoutCreateInfo const pipeline_layout_info{
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 0, nullptr, static_cast<uint32_t>(push_ranges.size()), push_ranges.data()};
+
+    CreatePipelineHelper pipe(*this);
+    pipe.InitInfo();
+    pipe.shader_stages_ = {vs.GetStageCreateInfo(), fs.GetStageCreateInfo()};
+    pipe.pipeline_layout_ci_ = pipeline_layout_info;
+    pipe.InitState();
+    m_errorMonitor->ExpectSuccess();
+    pipe.CreateGraphicsPipeline();
+    m_errorMonitor->VerifyNotFound();
+}
