@@ -11862,3 +11862,100 @@ TEST_F(VkPositiveLayerTest, ImageDrmFormatModifier) {
         vk::DestroyImage(device(), image, nullptr);
     }
 }
+
+TEST_F(VkPositiveLayerTest, ResetQueryPoolOrder) {
+    TEST_DESCRIPTION("Ensure queries can be performed when the state is available and reset");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    if (IsPlatform(kMockICD) || DeviceSimulation()) {
+        printf("%s Test not supported by MockICD, skipping test case.\n", kSkipPrefix);
+        return;
+    }
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence ts_fence;
+    auto fence_info = LvlInitStruct<VkFenceCreateInfo>();
+    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vk::CreateFence(m_device->device(), &fence_info, nullptr, &ts_fence);
+    vk::ResetFences(m_device->device(), 1, &ts_fence);
+
+    VkQueryPool query_pool;
+    VkQueryPoolCreateInfo query_pool_create_info{};
+    query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    query_pool_create_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    query_pool_create_info.queryCount = 1;
+    vk::CreateQueryPool(m_device->device(), &query_pool_create_info, nullptr, &query_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = m_commandPool->handle();
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vk::AllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+        vk::BeginCommandBuffer(command_buffer[0], &begin_info);
+        vk::CmdResetQueryPool(command_buffer[0], query_pool, 0, 1);
+        vk::EndCommandBuffer(command_buffer[0]);
+
+        vk::BeginCommandBuffer(command_buffer[1], &begin_info);
+        vk::CmdWriteTimestamp(command_buffer[1], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, query_pool, 0);
+        vk::EndCommandBuffer(command_buffer[1]);
+    }
+
+    VkSubmitInfo submit_info{};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = nullptr;
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = nullptr;
+
+    // Begin by resetting the query pool.
+    {
+        submit_info.pCommandBuffers = &command_buffer[0];
+        // This causes the global query state map to be updated from QUERYSTATE_UNKNOWN to QUERYSTATE_RESET.
+        vk::QueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    // Write a timestamp, and add a fence to be signalled.
+    {
+        submit_info.pCommandBuffers = &command_buffer[1];
+        // This verifies that the local/global query state is QUERYSTATE_RESET (which it is) and updates the state to
+        // QUERYSTATE_ENDED.
+        vk::QueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    // Reset query pool again.
+    {
+        submit_info.pCommandBuffers = &command_buffer[0];
+        // Update global query state map to QUERYSTATE_RESET again.
+        vk::QueueSubmit(m_device->m_queue, 1, &submit_info, ts_fence);
+    }
+
+    // Finally, write a second timestamp, but before that, wait for the fence.
+    {
+        // Hitting this fence should cause:
+        //   1. Reset
+        //   2. Query finished
+        // Which effectively means the query results are availalbe, but that it's also ok to use the query.
+        vk::WaitForFences(m_device->device(), 1, &ts_fence, true, std::numeric_limits<uint64_t>::max());
+        // This check now fails as the global query state contains QUERYSTATE_AVAILABLE.
+        submit_info.pCommandBuffers = &command_buffer[1];
+        vk::QueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    vk::QueueWaitIdle(m_device->m_queue);
+
+    vk::FreeCommandBuffers(m_device->device(), m_commandPool->handle(), 2, command_buffer);
+    vk::DestroyQueryPool(m_device->device(), query_pool, nullptr);
+    vk::DestroyFence(m_device->device(), ts_fence, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
