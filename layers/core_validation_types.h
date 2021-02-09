@@ -774,6 +774,16 @@ enum QueryResultType {
     QUERYRESULT_WAIT_ON_RUNNING,
 };
 
+using QuerySubmissionOrder = uint64_t;
+constexpr QuerySubmissionOrder QUERY_SUBMISSION_ORDER_DONT_CARE = 0;
+struct QuerySubmissionState {
+    QuerySubmissionState() = default;
+    QuerySubmissionState(const QuerySubmissionState &s) = default;
+    QuerySubmissionState(QueryState s, uint64_t o) : state(s), order(o) {}
+    QueryState state = QUERYSTATE_UNKNOWN;
+    QuerySubmissionOrder order = QUERY_SUBMISSION_ORDER_DONT_CARE;
+};
+
 inline const char *string_QueryResultType(QueryResultType result_type) {
     switch (result_type) {
         case QUERYRESULT_UNKNOWN:
@@ -1245,7 +1255,7 @@ struct QFOTransferCBScoreboards {
     QFOTransferCBScoreboard<TransferBarrier> release;
 };
 
-typedef std::map<QueryObject, QueryState> QueryMap;
+typedef std::map<QueryObject, QuerySubmissionState> QueryMap;
 typedef layer_data::unordered_map<VkEvent, VkPipelineStageFlags2KHR> EventToStageMap;
 typedef ImageSubresourceLayoutMap::LayoutMap GlobalImageLayoutRangeMap;
 typedef layer_data::unordered_map<VkImage, Optional<GlobalImageLayoutRangeMap>> GlobalImageLayoutMap;
@@ -1368,7 +1378,7 @@ struct CMD_BUFFER_STATE : public BASE_NODE {
         std::function<bool(const ValidationStateTracker *device_data, bool do_validate, EventToStageMap *localEventToStageMap)>>
         eventUpdates;
     std::vector<std::function<bool(const ValidationStateTracker *device_data, bool do_validate, VkQueryPool &firstPerfQueryPool,
-                                   uint32_t perfQueryPass, QueryMap *localQueryToStateMap)>>
+                                   uint32_t perfQueryPass, QueryMap *localQueryToStateMap, QuerySubmissionOrder)>>
         queryUpdates;
     layer_data::unordered_set<cvdescriptorset::DescriptorSet *> validated_descriptor_sets;
     // Contents valid only after an index buffer is bound (CBSTATUS_INDEX_BUFFER_BOUND set)

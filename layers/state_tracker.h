@@ -97,6 +97,9 @@ class QUEUE_STATE {
 
     uint64_t seq;
     std::deque<CB_SUBMISSION> submissions;
+
+    QuerySubmissionOrder order_id_ = 0;
+    QuerySubmissionOrder GetQueryID() { return order_id_++; }
 };
 
 class QUERY_POOL_STATE : public BASE_NODE {
@@ -997,7 +1000,7 @@ class ValidationStateTracker : public ValidationObject {
     void PostCallRecordQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo, VkResult result) override;
 
     uint64_t RecordSubmitFence(QUEUE_STATE* queue_state, VkFence fence, uint32_t submit_count);
-    void RecordSubmitCommandBuffer(CB_SUBMISSION& submission, VkCommandBuffer command_buffer);
+    void RecordSubmitCommandBuffer(CB_SUBMISSION& submission, VkCommandBuffer command_buffer, QUEUE_STATE& queue_state);
     bool RecordSubmitSignalSemaphore(CB_SUBMISSION& submission, VkQueue queue, VkSemaphore semaphore, uint64_t value,
                                      uint64_t next_seq);
     void RecordSubmitWaitSemaphore(CB_SUBMISSION& submission, VkQueue queue, VkSemaphore semaphore, uint64_t value,
@@ -1368,11 +1371,11 @@ class ValidationStateTracker : public ValidationObject {
     void ResetCommandBufferPushConstantDataIfIncompatible(CMD_BUFFER_STATE* cb_state, VkPipelineLayout layout);
     void SetMemBinding(VkDeviceMemory mem, BINDABLE* mem_binding, VkDeviceSize memory_offset,
                        const VulkanTypedHandle& typed_handle);
-    static bool SetQueryState(QueryObject object, QueryState value, QueryMap* localQueryToStateMap);
+    static bool SetQueryState(QueryObject object, QuerySubmissionState value, QueryMap* localQueryToStateMap);
     static bool SetQueryStateMulti(VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount, uint32_t perfPass,
-                                   QueryState value, QueryMap* localQueryToStateMap);
-    QueryState GetQueryState(const QueryMap* localQueryToStateMap, VkQueryPool queryPool, uint32_t queryIndex,
-                             uint32_t perfPass) const;
+                                   QuerySubmissionState value, QueryMap* localQueryToStateMap);
+    QuerySubmissionState GetQueryState(const QueryMap* localQueryToStateMap, VkQueryPool queryPool, uint32_t queryIndex,
+                                       uint32_t perfPass) const;
     bool SetSparseMemBinding(const VkDeviceMemory mem, const VkDeviceSize mem_offset, const VkDeviceSize mem_size,
                              const VulkanTypedHandle& typed_handle);
     void UpdateBindBufferMemoryState(VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset);
