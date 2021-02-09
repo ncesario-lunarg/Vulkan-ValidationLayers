@@ -38,6 +38,13 @@ if (NOT VVL_CPP_STANDARD)
     set(VVL_CPP_STANDARD 11)
 endif()
 
+option(VVL_ROBIN_HOOD_DIR "Set the location to the robin-hood-hasing source directory")
+if (NOT VVL_ROBIN_HOOD_DIR)
+    set(VVL_ROBIN_HOOD_DIR ${CMAKE_CURRENT_LIST_DIR}/external/robin-hood-hashing)
+endif()
+add_subdirectory(${VVL_ROBIN_HOOD_DIR} ${CMAKE_BINARY_DIR}/robin-hood-hashing)
+set(VVL_USE_ROBIN_HOOD_UMAP ON)
+
 # API_NAME allows renaming builds to avoid conflicts with installed SDKs.  It is referenced by layers/vk_loader_platform.h
 set(API_NAME "Vulkan" CACHE STRING "API name to use when building")
 string(TOLOWER ${API_NAME} API_LOWERCASE)
@@ -287,6 +294,10 @@ add_library(VkLayer_utils
             layers/vk_layer_utils.cpp
             layers/vk_format_utils.cpp)
 target_link_libraries(VkLayer_utils PUBLIC Vulkan::Headers)
+if (VVL_USE_ROBIN_HOOD_UMAP)
+    target_link_libraries(VkLayer_utils PUBLIC robin_hood::robin_hood)
+    target_compile_definitions(VkLayer_utils PUBLIC VVL_USE_ROBIN_HOOD_UMAP)
+endif()
 set_target_properties(VkLayer_utils PROPERTIES CXX_STANDARD ${VVL_CPP_STANDARD})
 if(WIN32)
     target_compile_definitions(VkLayer_utils PUBLIC _CRT_SECURE_NO_WARNINGS)
