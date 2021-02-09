@@ -35,7 +35,7 @@ enable_testing()
 
 option(VVL_CPP_STANDARD "Set the C++ standard to build against. The value will be passed to cmake's CXX_STANDARD property. Default = 11" 11)
 if (NOT VVL_CPP_STANDARD)
-    set(VVL_CPP_STANDARD 11)
+    set(VVL_CPP_STANDARD 17)
 endif()
 
 option(VVL_ROBIN_HOOD_DIR "Set the location to the robin-hood-hasing source directory")

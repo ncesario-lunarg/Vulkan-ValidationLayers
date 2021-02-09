@@ -1241,7 +1241,7 @@ struct QFOTransferCBScoreboards {
 typedef std::map<QueryObject, QueryState> QueryMap;
 typedef std::unordered_map<VkEvent, VkPipelineStageFlags> EventToStageMap;
 typedef ImageSubresourceLayoutMap::LayoutMap GlobalImageLayoutRangeMap;
-typedef std::unordered_map<VkImage, std::unique_ptr<GlobalImageLayoutRangeMap>> GlobalImageLayoutMap;
+typedef std::unordered_map<VkImage, GlobalImageLayoutRangeMap> GlobalImageLayoutMap;
 typedef std::unordered_map<VkImage, std::unique_ptr<ImageSubresourceLayoutMap>> CommandBufferImageLayoutMap;
 
 enum LvlBindPoint {

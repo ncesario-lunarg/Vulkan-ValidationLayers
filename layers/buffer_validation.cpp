@@ -4168,23 +4168,14 @@ void CoreChecks::PreCallRecordCmdBlitImage2KHR(VkCommandBuffer commandBuffer, co
 GlobalImageLayoutRangeMap *GetLayoutRangeMap(GlobalImageLayoutMap *map, const IMAGE_STATE &image_state) {
     assert(map);
     // This approach allows for a single hash lookup or/create new
-    auto inserted = map->emplace(std::make_pair(image_state.image, nullptr));
-    if (inserted.second) {
-        assert(nullptr == inserted.first->second.get());
-        GlobalImageLayoutRangeMap *layout_map = new GlobalImageLayoutRangeMap(image_state.subresource_encoder.SubresourceCount());
-        inserted.first->second.reset(layout_map);
-        return layout_map;
-    } else {
-        assert(nullptr != inserted.first->second.get());
-        return inserted.first->second.get();
-    }
-    return nullptr;
+    auto inserted = map->try_emplace(image_state.image, image_state.subresource_encoder.SubresourceCount());
+    return &inserted.first->second;
 }
 
 const GlobalImageLayoutRangeMap *GetLayoutRangeMap(const GlobalImageLayoutMap &map, VkImage image) {
     auto it = map.find(image);
     if (it != map.end()) {
-        return it->second.get();
+        return &it->second;
     }
     return nullptr;
 }
