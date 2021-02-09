@@ -29,6 +29,15 @@
       "build_dir": "SPIRV-Headers/build",
       "install_dir": "SPIRV-Headers/build/install",
       "commit": "faa570afbc91ac73d594d787486bcf8f2df1ace0"
+    },
+    {
+      "name": "robin_hood",
+      "url": "https://github.com/martinus/robin-hood-hashing.git",
+      "sub_dir": "robin-hood-hashing",
+      "build_dir": "robin-hood-hashing/build",
+      "install_dir": "robin-hood-hashing/build/install",
+      "commit": "master",
+      "build_step": "custom"
     }
   ],
   "install_names" : {

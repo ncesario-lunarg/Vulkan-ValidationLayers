@@ -29,6 +29,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#ifdef VVL_USE_ROBIN_HOOD_UMAP
+#include <robin_hood.h>
+#endif
+
 // A vector class with "small string optimization" -- meaning that the class contains a fixed working store for N elements.
 // Useful in in situations where the needed size is unknown, but the typical size is known  If size increases beyond the
 // fixed capacity, a dynamically allocated working store is created.
@@ -548,6 +552,7 @@ class value_type_helper_set {
 };
 
 template <typename Key, typename T, int N = 1>
+#ifndef VVL_USE_ROBIN_HOOD_UMAP
 class small_unordered_map
     : public small_container<Key, std::pair<const Key, T>, std::unordered_map<Key, T>, value_type_helper_map<Key, T>, N> {
   public:
@@ -573,6 +578,9 @@ class small_unordered_map
         }
     }
 };
+#else
+class small_unordered_map : public robin_hood::unordered_map< Key, T > { };
+#endif
 
 template <typename Key, int N = 1>
 class small_unordered_set : public small_container<Key, Key, std::unordered_set<Key>, value_type_helper_set<Key>, N> {};
