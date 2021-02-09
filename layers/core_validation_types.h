@@ -1242,7 +1242,7 @@ typedef std::map<QueryObject, QueryState> QueryMap;
 typedef std::unordered_map<VkEvent, VkPipelineStageFlags> EventToStageMap;
 typedef ImageSubresourceLayoutMap::LayoutMap GlobalImageLayoutRangeMap;
 typedef std::unordered_map<VkImage, GlobalImageLayoutRangeMap> GlobalImageLayoutMap;
-typedef std::unordered_map<VkImage, std::unique_ptr<ImageSubresourceLayoutMap>> CommandBufferImageLayoutMap;
+typedef std::unordered_map<VkImage, ImageSubresourceLayoutMap> CommandBufferImageLayoutMap;
 
 enum LvlBindPoint {
     BindPoint_Graphics = VK_PIPELINE_BIND_POINT_GRAPHICS,

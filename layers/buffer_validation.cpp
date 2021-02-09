@@ -4193,7 +4193,7 @@ bool CoreChecks::ValidateCmdBufImageLayouts(const CMD_BUFFER_STATE *pCB, const G
         const auto *image_state = GetImageState(image);
         if (!image_state) continue;  // Can't check layouts of a dead image
         const auto &subres_map = layout_map_entry.second;
-        const auto &initial_layout_map = subres_map->GetInitialLayoutMap();
+        const auto &initial_layout_map = subres_map.GetInitialLayoutMap();
         // Validate the initial_uses for each subresource referenced
         if (initial_layout_map.empty()) continue;
 
@@ -4224,7 +4224,7 @@ bool CoreChecks::ValidateCmdBufImageLayouts(const CMD_BUFFER_STATE *pCB, const G
                 // TODO: Set memory invalid which is in mem_tracker currently
             } else if (image_layout != initial_layout) {
                 // Need to look up the inital layout *state* to get a bit more information
-                const auto *initial_layout_state = subres_map->GetSubresourceInitialLayoutState(pos->first.begin);
+                const auto *initial_layout_state = subres_map.GetSubresourceInitialLayoutState(pos->first.begin);
                 assert(initial_layout_state);  // There's no way we should have an initial layout without matching state...
                 bool matches = ImageLayoutMatches(initial_layout_state->aspect_mask, image_layout, initial_layout);
                 if (!matches) {
@@ -4251,7 +4251,7 @@ bool CoreChecks::ValidateCmdBufImageLayouts(const CMD_BUFFER_STATE *pCB, const G
         }
 
         // Update all layout set operations (which will be a subset of the initial_layouts)
-        sparse_container::splice(overlay_map, subres_map->GetCurrentLayoutMap(), sparse_container::value_precedence::prefer_source);
+        sparse_container::splice(overlay_map, subres_map.GetCurrentLayoutMap(), sparse_container::value_precedence::prefer_source);
     }
 
     return skip;
@@ -4264,7 +4264,7 @@ void CoreChecks::UpdateCmdBufImageLayouts(CMD_BUFFER_STATE *pCB) {
         const auto *image_state = GetImageState(image);
         if (!image_state) continue;  // Can't set layouts of a dead image
         auto *global_map = GetLayoutRangeMap(&imageLayoutMap, *image_state);
-        sparse_container::splice(global_map, subres_map->GetCurrentLayoutMap(), sparse_container::value_precedence::prefer_source);
+        sparse_container::splice(global_map, subres_map.GetCurrentLayoutMap(), sparse_container::value_precedence::prefer_source);
     }
 }
 

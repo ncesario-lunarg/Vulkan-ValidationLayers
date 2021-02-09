@@ -155,32 +155,19 @@ GlobalQFOTransferBarrierMap<VkBufferMemoryBarrier> &CoreChecks::GetGlobalQFORele
     return qfo_release_buffer_barrier_map;
 }
 
-static std::unique_ptr<ImageSubresourceLayoutMap> LayoutMapFactory(const IMAGE_STATE &image_state) {
-    std::unique_ptr<ImageSubresourceLayoutMap> map(new ImageSubresourceLayoutMap(image_state));
-    return map;
-}
-
 // The const variant only need the image as it is the key for the map
 const ImageSubresourceLayoutMap *GetImageSubresourceLayoutMap(const CMD_BUFFER_STATE *cb_state, VkImage image) {
     auto it = cb_state->image_layout_map.find(image);
     if (it == cb_state->image_layout_map.cend()) {
         return nullptr;
     }
-    return it->second.get();
+    return &it->second;
 }
 
 // The non-const variant only needs the image state, as the factory requires it to construct a new entry
 ImageSubresourceLayoutMap *GetImageSubresourceLayoutMap(CMD_BUFFER_STATE *cb_state, const IMAGE_STATE &image_state) {
-    auto it = cb_state->image_layout_map.find(image_state.image);
-    if (it == cb_state->image_layout_map.end()) {
-        // Empty slot... fill it in.
-        auto insert_pair = cb_state->image_layout_map.insert(std::make_pair(image_state.image, LayoutMapFactory(image_state)));
-        assert(insert_pair.second);
-        ImageSubresourceLayoutMap *new_map = insert_pair.first->second.get();
-        assert(new_map);
-        return new_map;
-    }
-    return it->second.get();
+    auto it = cb_state->image_layout_map.try_emplace(image_state.image, image_state);
+    return &it.first->second;
 }
 
 void AddInitialLayoutintoImageLayoutMap(const IMAGE_STATE &image_state, GlobalImageLayoutMap &image_layout_map) {
@@ -11393,7 +11380,7 @@ bool CoreChecks::PreCallValidateCmdExecuteCommands(VkCommandBuffer commandBuffer
             const auto &sub_cb_subres_map = sub_layout_map_entry.second;
             // Validate the initial_uses, that they match the current state of the primary cb, or absent a current state,
             // that the match any initial_layout.
-            for (const auto &subres_layout : *sub_cb_subres_map) {
+            for (const auto &subres_layout : sub_cb_subres_map) {
                 const auto &sub_layout = subres_layout.initial_layout;
                 const auto &subresource = subres_layout.subresource;
                 if (VK_IMAGE_LAYOUT_UNDEFINED == sub_layout) continue;  // secondary doesn't care about current or initial
