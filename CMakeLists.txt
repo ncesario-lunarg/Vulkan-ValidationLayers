@@ -138,7 +138,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(LAYERS_HELPER_FOLDER "Helper Targets")
 
 # Options for Linux only
-if(UNIX AND NOT APPLE) # i.e. Linux
+if(UNIX AND (NOT (APPLE OR ANDROID))) # i.e. Linux
     include(FindPkgConfig)
     option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
     option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
@@ -159,59 +159,10 @@ if(UNIX AND NOT APPLE) # i.e. Linux
     endif()
 endif()
 
-# Platform-specific compiler switches
 option(BUILD_WERROR "Treat compiler warnings as errors" ON)
-if(MAKE_C_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-Wconversion
 
-                        # TODO These warnings also get turned on with -Wconversion in some versions of clang.
-                        #      Leave off until further investigation.
-                        -Wno-sign-conversion
-                        -Wno-shorten-64-to-32
-                        -Wno-string-conversion
-                        -Wno-implicit-int-conversion
-                        -Wno-enum-enum-conversion)
-
-endif()
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-Wall
-                        -Wextra
-                        -Wno-unused-parameter
-                        -Wno-missing-field-initializers
-                        -fno-strict-aliasing
-                        -fno-builtin-memcmp
-                        -fvisibility=hidden)
-
-    # Treat warnings as errors for versions of GCC and c++11-compliant Clang versions that are shipped on Ubuntu 18.04 or older.
-    if(BUILD_WERROR)
-        if ((CMAKE_COMPILER_IS_GNUCXX AND NOT (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.3.0)) OR
-           (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.0.0)))
-            add_compile_options(-Werror)
-        endif()
-    endif()
-
-    set(CMAKE_C_STANDARD 99)
-
-    # For GCC version 7.1 or greater, we need to disable the implicit fallthrough warning since there's no consistent way to satisfy
-    # all compilers until they all accept the C++17 standard.
-    if(CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_CXX_COMPILER_VERSION LESS 7.1))
-        add_compile_options(-Wimplicit-fallthrough=0)
-    endif()
-elseif(MSVC)
-    if(BUILD_WERROR)
-        # Treat warnings as errors
-        add_compile_options("/WX")
-    endif()
-    # Warn about nested declarations
-    add_compile_options("/w34456")
-    # Warn about potentially uninitialized variables
-    add_compile_options("/w34701")
-    add_compile_options("/w34703")
-    # Warn about different indirection types.
-    add_compile_options("/w34057")
-    # Warn about signed/unsigned mismatch.
-    add_compile_options("/w34245")
-endif()
+# List of non-third-party targets compiled by this repo
+set(VVL_COMPILED_TARGETS)
 
 if(MAKE_C_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wconversion
@@ -244,6 +195,12 @@ if (USE_ROBIN_HOOD_HASHING)
 endif()
 
 if(BUILD_TESTS OR BUILD_LAYERS)
+    if (ANDROID)
+        if (NOT GLSLANG_SOURCE_DIR)
+            message(FATAL_ERROR "GLSLANG_SOURCE_DIR must point to the glslang source directory for Android builds")
+        endif()
+        add_subdirectory(${GLSLANG_SOURCE_DIR} ${CMAKE_BINARY_DIR}/glslang)
+    endif()
 
     set(GLSLANG_INSTALL_DIR "GLSLANG-NOTFOUND" CACHE PATH "Absolute path to a glslang install directory")
     if(NOT GLSLANG_INSTALL_DIR AND NOT DEFINED ENV{GLSLANG_INSTALL_DIR} AND NOT TARGET glslang)
@@ -346,6 +303,10 @@ if(BUILD_TESTS OR BUILD_LAYERS)
         endif()
     else()
         set(SPIRV_TOOLS_LIBRARIES SPIRV-Tools SPIRV-Tools-opt)
+        if (ANDROID)
+            # TODO (ncesario) This can be removed once https://github.com/KhronosGroup/SPIRV-Tools/pull/4157 is merged.
+            list(APPEND SPIRV_TOOLS_LIBRARIES android log)
+        endif()
         set(SPIRV_TOOLS_INCLUDE_DIR "${spirv-tools_SOURCE_DIR}/include" CACHE PATH "Path to spirv tools headers")
     endif()
 
@@ -367,6 +328,7 @@ add_library(VkLayer_utils
             layers/vk_layer_extension_utils.cpp
             layers/vk_layer_utils.cpp
             layers/vk_format_utils.cpp)
+list(APPEND VVL_COMPILED_TARGETS VkLayer_utils)
 target_link_libraries(VkLayer_utils PUBLIC Vulkan::Headers)
 set_target_properties(VkLayer_utils PROPERTIES CXX_STANDARD ${VVL_CPP_STANDARD})
 if (UPDATE_DEPS)
@@ -436,3 +398,60 @@ endif()
 if(BUILD_LAYERS OR BUILD_LAYER_SUPPORT_FILES)
     add_subdirectory(layers)
 endif()
+
+# Platform-specific compiler switches
+foreach (_target ${VVL_COMPILED_TARGETS})
+    if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${_target} PRIVATE
+                               -Wall
+                               -Wextra
+                               -Wno-unused-parameter
+                               -Wno-missing-field-initializers
+                               -fno-strict-aliasing
+                               -fno-builtin-memcmp
+                               -fvisibility=hidden)
+
+        # Treat warnings as errors for versions of GCC and c++11-compliant Clang versions that are shipped on Ubuntu 18.04 or older.
+        if(BUILD_WERROR)
+            if ((CMAKE_COMPILER_IS_GNUCXX AND NOT (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.3.0)) OR
+               (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.0.0)))
+                target_compile_options(${_target} PRIVATE -Werror)
+            endif()
+        endif()
+
+        set(CMAKE_C_STANDARD 99)
+
+        # For GCC version 7.1 or greater, we need to disable the implicit fallthrough warning since there's no consistent way to satisfy
+        # all compilers until they all accept the C++17 standard.
+        if(CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_CXX_COMPILER_VERSION LESS 7.1))
+            target_compile_options(${_target} PRIVATE -Wimplicit-fallthrough=0)
+        endif()
+    elseif(MSVC)
+        if(BUILD_WERROR)
+            # Treat warnings as errors
+            target_compile_options(${_target} PRIVATE "/WX")
+        endif()
+        # Warn about nested declarations
+        target_compile_options(${_target} PRIVATE "/w34456")
+        # Warn about potentially uninitialized variables
+        target_compile_options(${_target} PRIVATE "/w34701")
+        target_compile_options(${_target} PRIVATE "/w34703")
+        # Warn about different indirection types.
+        target_compile_options(${_target} PRIVATE "/w34057")
+        # Warn about signed/unsigned mismatch.
+        target_compile_options(${_target} PRIVATE "/w34245")
+    endif()
+
+    if(MAKE_C_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-Wconversion
+
+                            # TODO These warnings also get turned on with -Wconversion in some versions of clang.
+                            #      Leave off until further investigation.
+                            -Wno-sign-conversion
+                            -Wno-shorten-64-to-32
+                            -Wno-string-conversion
+                            -Wno-implicit-int-conversion
+                            -Wno-enum-enum-conversion)
+
+    endif()
+endforeach()

@@ -24,12 +24,7 @@
 
 #include "lvt_function_pointers.h"
 
-#ifdef ANDROID
-#include "vktestframeworkandroid.h"
-class VkImageObj;
-#else
 #include "vktestframework.h"
-#endif
 
 #if defined(ANDROID)
 #include <android/log.h>

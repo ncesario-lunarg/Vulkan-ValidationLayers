@@ -134,6 +134,10 @@ int VkTestFramework::m_width = 0;
 int VkTestFramework::m_height = 0;
 int VkTestFramework::m_phys_device_index = -1;
 
+#ifdef __ANDROID__
+ANativeWindow *VkTestFramework::window = nullptr;
+#endif
+
 bool VkTestFramework::optionMatch(const char *option, char *optionLine) {
     if (strncmp(option, optionLine, strlen(option)) == 0)
         return true;

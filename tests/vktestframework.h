@@ -70,6 +70,10 @@ class VkTestFramework : public ::testing::Test {
     char **ReadFileData(const char *fileName);
     void FreeFileData(char **data);
 
+#ifdef __ANDROID__
+    static ANativeWindow *window;
+#endif
+
   protected:
     VkTestFramework();
     virtual ~VkTestFramework() = 0;
