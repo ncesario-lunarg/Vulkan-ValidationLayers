@@ -27,6 +27,7 @@ build-android/bin
 build-android/libs
 build-android/obj
 build-android/third_party
+build-android/jni/Application.mk
 *.config
 *.creator
 *.creator.user
