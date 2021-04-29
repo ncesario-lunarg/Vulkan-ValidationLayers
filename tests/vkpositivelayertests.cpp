@@ -12356,3 +12356,149 @@ TEST_F(VkPositiveLayerTest, MeshShaderOnly) {
     helper.CreateGraphicsPipeline();
     m_errorMonitor->VerifyNotFound();
 }
+
+TEST_F(VkPositiveLayerTest, DescriptorIndexingUnused) {
+    TEST_DESCRIPTION("Test unused descriptor indices.");
+
+    SetTargetApiVersion(VK_API_VERSION_1_2);
+
+    ASSERT_NO_FATAL_FAILURE(InitFramework());
+
+    if (DeviceValidationVersion() < VK_API_VERSION_1_2) {
+        printf("%s Vulkan 1.2 not supported but required. Skipping\n", kSkipPrefix);
+        return;
+    }
+
+    auto features12 = LvlInitStruct<VkPhysicalDeviceVulkan12Features>();
+    features12.descriptorBindingPartiallyBound = VK_TRUE;
+    auto features2 = LvlInitStruct<VkPhysicalDeviceFeatures2>(&features12);
+    vk::GetPhysicalDeviceFeatures2(gpu(), &features2);
+
+    if (VK_TRUE != features12.descriptorBindingPartiallyBound) {
+        printf("%s VkPhysicalDeviceVulkan12Features::descriptorBindingPartiallyBound not supported and is required. Skipping.", kSkipPrefix);
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitState(nullptr, &features2));
+
+    const char* cs_source = R"glsl(#version 460
+        layout (local_size_x = 8, local_size_y = 8) in;
+        layout (set = 0, binding = 0, rgba8) uniform image2D outputImages[];
+        void main() {
+            imageSize(outputImages[0]);
+            imageStore(outputImages[0], ivec2(gl_GlobalInvocationID.xy), vec4(0.5, 0.5, 0.5, 1.0));
+        }
+    )glsl";
+    const VkShaderObj cs(m_device, cs_source, VK_SHADER_STAGE_COMPUTE_BIT, this, "main", false, nullptr, SPV_ENV_UNIVERSAL_1_5);
+
+  // here's the interesting bits
+  // create indexed descriptor set layout
+  VkDescriptorSetLayout descriptor_layout;
+  {
+    VkDescriptorBindingFlags binding_flags[1] = { VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT };
+    auto layout_flags = LvlInitStruct<VkDescriptorSetLayoutBindingFlagsCreateInfo>();
+    layout_flags.bindingCount = 1;
+    layout_flags.pBindingFlags = binding_flags;
+
+    auto layout_create_info = LvlInitStruct<VkDescriptorSetLayoutCreateInfo>(&layout_flags);
+    VkDescriptorSetLayoutBinding indexed_layout[1] = {};
+    indexed_layout[0].binding = 0;
+    indexed_layout[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    indexed_layout[0].descriptorCount = 1024;
+    indexed_layout[0].stageFlags = VK_SHADER_STAGE_ALL;
+
+    layout_create_info.bindingCount = 1;
+    layout_create_info.pBindings = indexed_layout;
+
+    vk::CreateDescriptorSetLayout(device(), &layout_create_info, nullptr, &descriptor_layout);
+  }
+
+  // create pipeline layout
+  VkPipelineLayout pipeline_layout = {};
+  {
+    VkPipelineLayoutCreateInfo layout_create_info = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+    layout_create_info.pSetLayouts = &descriptor_layout;
+    layout_create_info.setLayoutCount = 1;
+    vk::CreatePipelineLayout(device(), &layout_create_info, nullptr, &pipeline_layout);
+  }
+
+  // create descriptor pool
+  VkDescriptorPool descriptor_pool = {};
+  {
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+    VkDescriptorPoolSize pool_size = {};
+    pool_size.descriptorCount = 1;
+    pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    descriptor_pool_create_info.pPoolSizes = &pool_size;
+    descriptor_pool_create_info.poolSizeCount = 1;
+    descriptor_pool_create_info.maxSets = 2;
+    vk::CreateDescriptorPool(device(), &descriptor_pool_create_info, nullptr, &descriptor_pool);
+  }
+
+  // create compute pipeline
+  VkPipeline compute_pipeline = {};
+  {
+    auto compute_create_info = LvlInitStruct<VkComputePipelineCreateInfo>();
+    compute_create_info.stage = cs.GetStageCreateInfo();
+    compute_create_info.layout = pipeline_layout;
+    vk::CreateComputePipelines(device(), nullptr, 1, &compute_create_info, nullptr, &compute_pipeline);
+  }
+
+  auto descriptor_allocate_info = LvlInitStruct<VkDescriptorSetAllocateInfo>();
+  VkDescriptorSet descriptor_set = {};
+  descriptor_allocate_info.descriptorPool = descriptor_pool;
+  descriptor_allocate_info.descriptorSetCount = 1;
+  descriptor_allocate_info.pSetLayouts = &descriptor_layout;
+  vk::AllocateDescriptorSets(device(), &descriptor_allocate_info, &descriptor_set);
+
+  auto write_descriptor = LvlInitStruct<VkWriteDescriptorSet>();
+  write_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+
+    VkImageObj image(m_device);
+    image.Init(1024, 1024, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    VkImageView image_view = image.targetView(VK_FORMAT_R8G8B8A8_UNORM);
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // really interesting! adding to this array causes the validation layers
+  // to fail with the size of array + 1
+  VkDescriptorImageInfo image_info[1] = {};
+  image_info[0].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  image_info[0].imageView = image_view;
+  /*
+  image_info[1].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  image_info[1].imageView = output.image_view;
+  image_info[2].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  image_info[2].imageView = compute_output.image_view;
+  */
+  write_descriptor.descriptorCount = 1;
+  write_descriptor.dstBinding = 0;
+  write_descriptor.dstArrayElement = 0;
+  write_descriptor.dstSet = descriptor_set;
+  write_descriptor.pImageInfo = image_info;
+  vk::UpdateDescriptorSets(device(), 1, &write_descriptor, 0, nullptr);
+
+  m_errorMonitor->ExpectSuccess();
+
+  m_commandBuffer->begin();
+  vk::CmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline);
+
+  vk::CmdBindDescriptorSets(m_commandBuffer->handle(),
+                            VK_PIPELINE_BIND_POINT_COMPUTE,
+                            pipeline_layout,
+                            0, 1,
+                            &descriptor_set, 0,
+                            nullptr);
+  vk::CmdDispatch(m_commandBuffer->handle(),
+                  1024 / 8,
+                  1024 / 8,
+                  1);
+  m_commandBuffer->end();
+
+  m_errorMonitor->VerifyNotFound();
+
+  //VkSubmitInfo render_submit_info = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+  //render_submit_info.commandBufferCount = 1;
+  //render_submit_info.pCommandBuffers = &command_buffer;
+  //vk::QueueSubmit(queue, 1, &render_submit_info, nullptr);
+  //vk::QueueWaitIdle(queue);
+}
