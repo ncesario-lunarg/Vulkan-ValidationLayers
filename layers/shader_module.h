@@ -181,6 +181,8 @@ struct SHADER_MODULE_STATE : public BASE_NODE {
     layer_data::unordered_map<uint32_t, std::vector<spirv_inst_iter>> execution_mode_inst;
     // both OpDecorate and OpMemberDecorate builtin instructions
     std::vector<builtin_set> builtin_decoration_list;
+    // Objects stored in output variables. Used to track "usd" variables
+    layer_data::unordered_set<uint32_t> output_objects;
     struct EntryPoint {
         uint32_t offset;  // into module to get OpEntryPoint instruction
         VkShaderStageFlagBits stage;
@@ -289,6 +291,15 @@ struct SHADER_MODULE_STATE : public BASE_NODE {
     std::vector<uint32_t> CollectBuiltinBlockMembers(spirv_inst_iter entrypoint, uint32_t storageClass) const;
     std::vector<std::pair<uint32_t, interface_var>> CollectInterfaceByInputAttachmentIndex(
         layer_data::unordered_set<uint32_t> const &accessible_ids) const;
+
+    uint32_t GetSpecConstantByteSize(uint32_t const_id) const;
+
+    uint32_t GetSamplerDimension(const spirv_inst_iter &itr) const;
+
+    spirv_inst_iter GetDescriptorVariable(uint32_t desc_set, uint32_t binding) const;
+
+    layer_data::unordered_set<uint32_t> GetLayersUsed(uint32_t desc_set, uint32_t binding) const;
+    spirv_inst_iter GetBaseType(const spirv_inst_iter &word) const;
 };
 
 // TODO - Most things below are agnostic of even the shader module and more of pure SPIR-V utils

@@ -17,6 +17,7 @@
 
 #include "shader_module.h"
 
+#include <queue>
 #include <sstream>
 #include <string>
 
@@ -424,6 +425,14 @@ void SHADER_MODULE_STATE::BuildDefIndex() {
             // Execution Mode
             case spv::OpExecutionMode: {
                 execution_mode_inst[insn.word(1)].push_back(insn);
+            } break;
+
+            // Track store operations on output variables
+            case spv::OpStore: {
+                const auto store_itr = get_def(insn.word(1));
+                if ((store_itr != end()) && (store_itr.len() > 3) && (store_itr.word(3) == spv::StorageClassOutput)) {
+                    output_objects.emplace(insn.word(2));
+                }
             } break;
 
             default:
@@ -1704,6 +1713,262 @@ std::vector<std::pair<uint32_t, interface_var>> SHADER_MODULE_STATE::CollectInte
     }
 
     return out;
+}
+
+uint32_t SHADER_MODULE_STATE::GetSpecConstantByteSize(uint32_t const_id) const {
+    auto itr = spec_const_map.find(const_id);
+    if (itr != spec_const_map.cend()) {
+        const auto def_ins = get_def(itr->second);
+        const auto type_ins = get_def(def_ins.word(1));
+
+        // Specialization constants can only be of type bool, scalar integer, or scalar floating point
+        switch (type_ins.opcode()) {
+            case spv::OpTypeBool:
+                // VUID 00776 spec states: ...If the specialization constant is of type boolean, size must be the byte size of
+                // VkBool32
+                return sizeof(VkBool32);
+            case spv::OpTypeInt:
+                return type_ins.word(2) / 8;
+            case spv::OpTypeFloat:
+                return type_ins.word(2) / 8;
+            default:
+                return decoration_set::kInvalidValue;
+        }
+    }
+    return decoration_set::kInvalidValue;
+}
+
+struct ConstantValue {
+    spirv_inst_iter itr_;
+    const SHADER_MODULE_STATE& module_;
+
+    ConstantValue(spirv_inst_iter itr, const SHADER_MODULE_STATE& module) : itr_(itr), module_(module) {
+        if (itr_.opcode() != spv::OpConstant || itr_.opcode() != spv::OpConstantComposite) {
+            itr_ = module_.end();
+        }
+    }
+
+    // Expects a _Scalar_ type
+    uint32_t GetTypeWidth(const spirv_inst_iter &itr) const {
+        switch (itr.opcode()) {
+            case spv::OpTypeBool:
+                return 4;
+            case spv::OpTypeInt:
+            case spv::OpTypeFloat:
+                return itr.word(2) / 8;
+            default:
+                // Not a scalar type with a width
+                return 0;
+        }
+    }
+
+    // Returns the number of components for composite types (e.g., vec4 == 4).
+    // For OpConstant this returns 1
+    uint32_t length() const {
+        if (itr_.opcode() == spv::OpConstant) {
+            return 1;
+        } else if (itr_.opcode() == spv::OpConstantComposite){
+            return itr_.len() - 3;
+        } else {
+            assert(!"ConstantValue::length: itr_ is not a constant");
+        }
+    }
+
+    template<typename T>
+    T get(uint32_t i) const {
+        if (i < length()) {
+            const auto itr = module_.get_def(itr_.word(3 + i));
+            while (itr != module_.end()) {
+                switch (itr.opcode()) {
+                    case spv::OpConstant:
+                        if (GetTypeWidth(module_.get_def(itr.word(1))) <= 4) {
+                            return static_cast<T>(GetConstantValue(itr));
+                        }
+                        // TODO does it make sense to support types >32b?
+                        break;
+                }
+            }
+        }
+        return {};
+    }
+
+    operator bool() const { return itr_ != module_.end(); }
+};
+
+spirv_inst_iter SHADER_MODULE_STATE::GetBaseType(const spirv_inst_iter &word) const {
+    for (auto itr = word; itr != end();) {
+        switch (itr.opcode()) {
+            // This is what we're looking for
+            // NOTE: this is where using a "spirv tool" might come in handy; ideally we don't maintain this sort of list manually
+            case spv::OpTypeVoid:
+            case spv::OpTypeBool:
+            case spv::OpTypeInt:
+            case spv::OpTypeFloat:
+            case spv::OpTypeVector:
+            case spv::OpTypeMatrix:
+            case spv::OpTypeImage:
+            case spv::OpTypeSampler:
+            case spv::OpTypeSampledImage:
+            case spv::OpTypeArray:
+            case spv::OpTypeRuntimeArray:
+            case spv::OpTypeStruct:
+            case spv::OpTypeOpaque:
+            case spv::OpTypePointer:
+            case spv::OpTypeFunction:
+            case spv::OpTypeEvent:
+            case spv::OpTypeDeviceEvent:
+            case spv::OpTypeReserveId:
+            case spv::OpTypeQueue:
+            case spv::OpTypePipe:
+            case spv::OpTypeForwardPointer:
+            case spv::OpTypePipeStorage:
+            case spv::OpTypeNamedBarrier:
+                return itr;
+            case spv::OpLoad:
+                itr = get_def(itr.word(1));
+                break;
+            default:
+                return end();
+        }
+    }
+    return end();
+}
+
+uint32_t SHADER_MODULE_STATE::GetSamplerDimension(const spirv_inst_iter &itr) const {
+    const auto sampled_image_itr = get_def(itr.word(3));
+    auto image_sampler_type_itr = GetBaseType(sampled_image_itr);
+
+    switch (image_sampler_type_itr.opcode()) {
+        case spv::OpTypeSampledImage:
+            image_sampler_type_itr = get_def(image_sampler_type_itr.word(2));
+            break;
+    }
+
+    if (image_sampler_type_itr.opcode() == spv::OpTypeImage) {
+        switch (image_sampler_type_itr.word(3)) {
+            case spv::Dim1D:
+                return 1;
+            case spv::Dim2D:
+                return 2;
+            case spv::Dim3D:
+                return 3;
+            default:
+                return 0;  // TODO?
+        }
+    }
+    return 0;
+}
+
+spirv_inst_iter SHADER_MODULE_STATE::GetDescriptorVariable(uint32_t desc_set, uint32_t binding) const {
+    // TODO this loop could probably be avoided by tracking this at BuildDefIndex time
+    for (const auto itr : decorations) {
+        if ((itr.second.flags & (decoration_set::descriptor_set_bit | decoration_set::binding_bit)) &&
+            (itr.second.descriptor_set == desc_set) && (itr.second.binding == binding)) {
+            return get_def(itr.first);
+        }
+    }
+    return end();
+}
+
+struct UsageChain {
+    struct UsageChainIterator {
+        const SHADER_MODULE_STATE &module_;
+        std::queue<uint32_t> in_flight_ids_;
+        uint32_t curr_id_;
+
+        UsageChainIterator(uint32_t id, const SHADER_MODULE_STATE &module) : module_(module), curr_id_(id) {
+            in_flight_ids_.emplace(id);
+        }
+        UsageChainIterator(const UsageChainIterator &) = default;
+        UsageChainIterator(UsageChainIterator &&) = default;
+
+        UsageChainIterator Next() {
+            if (in_flight_ids_.empty()) {
+                return UsageChainIterator(0, module_);
+            }
+
+            const auto chain_id = in_flight_ids_.front();
+            in_flight_ids_.pop();
+            const auto chain_itr = module_.get_def(chain_id);
+            switch (chain_itr.opcode()) {
+                case spv::OpImageSampleImplicitLod:
+                    in_flight_ids_.push(chain_itr.word(3));
+                    in_flight_ids_.push(chain_itr.word(4));
+                    break;
+                case spv::OpLoad:
+                    in_flight_ids_.push(chain_itr.word(1));
+                    in_flight_ids_.push(chain_itr.word(3));
+                    break;
+                case spv::OpVariable:
+                    in_flight_ids_.push(chain_itr.word(1));
+                    break;
+                default:
+                    // no-op
+                    break;
+            }
+
+            return *this;
+        }
+
+        UsageChainIterator operator++() { return Next(); }
+
+        bool operator==(const UsageChainIterator &other) const { return curr_id_ == other.curr_id_; }
+        bool operator!=(const UsageChainIterator &other) const { return !(*this == other); }
+
+        uint32_t operator*() const { return curr_id_; }
+    };
+
+    UsageChainIterator itr_, end_itr_;
+
+    UsageChain(uint32_t id, const SHADER_MODULE_STATE &module) : itr_(id, module), end_itr_(0, module) {}
+
+    UsageChainIterator begin() { return itr_; }
+    const UsageChainIterator begin() const { return itr_; }
+    UsageChainIterator end() { return end_itr_; }
+    const UsageChainIterator end() const { return end_itr_; }
+};
+
+std::vector<UsageChain> GetUsage(uint32_t id, const SHADER_MODULE_STATE &mod) {
+    std::vector<UsageChain> usages;
+    for (const auto out_id : mod.output_objects) {
+        UsageChain uc(out_id, mod);
+        for (auto itr : uc) {
+            if (itr == id) {
+                usages.emplace_back(uc);
+                break;
+            }
+        }
+    }
+    return usages;
+}
+
+layer_data::unordered_set<uint32_t> SHADER_MODULE_STATE::GetLayersUsed(uint32_t desc_set, uint32_t binding) const {
+    layer_data::unordered_set<uint32_t> layers_used;
+    const auto itr =
+        GetDescriptorVariable(desc_set, binding);  // TODO looks like this might be attainable from IsSpecificDescriptorType
+
+    if (itr != end()) {
+        const auto usages =
+            GetUsage(*itr.it, *this);  // TODO Have to "collect" this. Might be able to re-use an existing "collect" method
+        for (const auto &usage : usages) {
+            for (const auto id : usage) {
+                const auto usage_itr = get_def(id);
+                switch (usage_itr.opcode()) {
+                    // TODO add other appropriate op codes
+                    case spv::OpImageSampleImplicitLod: {
+                        const auto coord_itr = get_def(usage_itr.word(4));
+                        ConstantValue coord(coord_itr, *this);
+                        const uint32_t dim = GetSamplerDimension(get_def(usage_itr.word(3)));
+                        if (dim < coord.length()) {
+                            const uint32_t layer = coord.get<uint32_t>(coord.length() - 1);
+                            layers_used.insert(layer);
+                        }
+                    } break;
+                }
+            }
+        }
+    }
+    return layers_used;
 }
 
 // Assumes itr points to an OpConstant instruction

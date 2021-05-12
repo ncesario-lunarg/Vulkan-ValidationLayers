@@ -4394,15 +4394,53 @@ bool CoreChecks::ValidateCmdBufImageLayouts(const CMD_BUFFER_STATE *pCB, const G
                 const auto aspect_mask = image_state->subresource_encoder.Decode(intersected_range.begin).aspectMask;
                 bool matches = ImageLayoutMatches(aspect_mask, image_layout, initial_layout);
                 if (!matches) {
-                    // We can report all the errors for the intersected range directly
-                    for (auto index : sparse_container::range_view<decltype(intersected_range)>(intersected_range)) {
-                        const auto subresource = image_state->subresource_encoder.Decode(index);
-                        skip |= LogError(
-                            pCB->commandBuffer(), kVUID_Core_DrawState_InvalidImageLayout,
-                            "Submitted command buffer expects %s (subresource: aspectMask 0x%X array layer %u, mip level %u) "
-                            "to be in layout %s--instead, current layout is %s.",
-                            report_data->FormatHandle(image).c_str(), subresource.aspectMask, subresource.arrayLayer,
-                            subresource.mipLevel, string_VkImageLayout(initial_layout), string_VkImageLayout(image_layout));
+                    bool array_layer_used = true;
+                    const auto* cb_state = pCB;
+                    // Validate image transitions based on shader usage
+                    for (const auto& last_bount : cb_state->lastBound) {
+                        const auto *pipe = last_bount.pipeline_state;
+                        if (pipe) {
+                            // TODO how to get these?
+                            const uint32_t desc_set = 0;
+                            const uint32_t binding = 0;
+                            const uint32_t array_layer = 0;
+
+                            for (const auto& stage : pipe->stage_state) {
+                                //for (const auto& descriptor_use : stage.descriptor_uses) {
+                                //    std::cout << "<" << descriptor_use.first.first << ", " << descriptor_use.first.second << ">, " << descriptor_use.second.samplers_used_by_image.size() << std::endl;
+                                //}
+
+                                auto* module = stage.shader_state.get(); // Within lock, so no need to create a new shared_ptr
+                                //auto accessible_ids = module->MarkAccessibleIds(entrypoint);
+                                //bool has_writeable_descriptors = false;
+                                //bool has_atomic_descriptors = false;
+                                //auto descriptor_uses = module->CollectInterfaceByDescriptorSlot(accessible_ids, &has_writeable_descriptors, &has_atomic_descriptors);
+
+                                auto layers_used = module->GetLayersUsed(desc_set, binding);
+                                if (layers_used.empty() || (layers_used.count(array_layer) == 0)) {
+                                    // We can determine from the SPV that the layer is not used. Don't validate it.
+                                    array_layer_used = false;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (array_layer_used) {
+                            break;
+                        }
+                    }
+
+                    if (array_layer_used) {
+                        // We can report all the errors for the intersected range directly
+                        for (auto index : sparse_container::range_view<decltype(intersected_range)>(intersected_range)) {
+                            const auto subresource = image_state->subresource_encoder.Decode(index);
+                            skip |= LogError(
+                                pCB->commandBuffer(), kVUID_Core_DrawState_InvalidImageLayout,
+                                "Submitted command buffer expects %s (subresource: aspectMask 0x%X array layer %u, mip level %u) "
+                                "to be in layout %s--instead, current layout is %s.",
+                                report_data->FormatHandle(image).c_str(), subresource.aspectMask, subresource.arrayLayer,
+                                subresource.mipLevel, string_VkImageLayout(initial_layout), string_VkImageLayout(image_layout));
+                        }
                     }
                 }
             }
