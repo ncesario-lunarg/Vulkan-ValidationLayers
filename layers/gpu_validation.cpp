@@ -2341,3 +2341,13 @@ void GpuAssisted::AllocateValidationResources(const VkCommandBuffer cmd_buffer, 
         return;
     }
 }
+
+std::shared_ptr<CMD_BUFFER_STATE> GpuAssisted::CreateCmdBufferState(VkCommandBuffer cb,
+                                                                    const VkCommandBufferAllocateInfo *pCreateInfo) {
+    return std::static_pointer_cast<CMD_BUFFER_STATE>(std::make_shared<CMD_BUFFER_STATE_GPUAV>(cb, pCreateInfo, this));
+}
+
+void CMD_BUFFER_STATE_GPUAV::Reset() {
+    CMD_BUFFER_STATE::Reset();
+    gpuav_state->ResetCommandBuffer(commandBuffer());
+}

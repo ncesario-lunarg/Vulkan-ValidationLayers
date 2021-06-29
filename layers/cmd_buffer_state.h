@@ -318,7 +318,7 @@ class CMD_BUFFER_STATE : public REFCOUNTED_NODE {
     CMD_BUFFER_STATE(VkCommandBuffer cb, const VkCommandBufferAllocateInfo *pCreateInfo)
         : REFCOUNTED_NODE(cb, kVulkanObjectTypeCommandBuffer), createInfo(*pCreateInfo) {}
 
-    ~CMD_BUFFER_STATE() { Destroy(); }
+    virtual ~CMD_BUFFER_STATE() { Destroy(); }
 
     void Destroy() override;
 
@@ -333,7 +333,7 @@ class CMD_BUFFER_STATE : public REFCOUNTED_NODE {
 
     void RemoveChild(BASE_NODE *child_node);
 
-    void Reset();
+    virtual void Reset();
 
     ImageSubresourceLayoutMap *GetImageSubresourceLayoutMap(const IMAGE_STATE &image_state);
     const ImageSubresourceLayoutMap *GetImageSubresourceLayoutMap(VkImage image) const;

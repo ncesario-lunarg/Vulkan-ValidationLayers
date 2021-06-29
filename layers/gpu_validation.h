@@ -124,6 +124,16 @@ struct GpuAssistedCmdDrawIndirectState {
     VkDeviceSize count_buffer_offset;
 };
 
+class CMD_BUFFER_STATE_GPUAV : public CMD_BUFFER_STATE {
+  public:
+    GpuAssisted* gpuav_state;
+
+    CMD_BUFFER_STATE_GPUAV(VkCommandBuffer cb, const VkCommandBufferAllocateInfo* pCreateInfo, GpuAssisted* ga)
+        : CMD_BUFFER_STATE(cb, pCreateInfo), gpuav_state(ga) {}
+
+    void Reset() final;
+};
+
 class GpuAssisted : public ValidationStateTracker {
     VkPhysicalDeviceFeatures supported_features;
     VkBool32 shaderInt64;
@@ -343,4 +353,7 @@ class GpuAssisted : public ValidationStateTracker {
                                                    VkPhysicalDeviceProperties* pPhysicalDeviceProperties) override;
     void PostCallRecordGetPhysicalDeviceProperties2(VkPhysicalDevice physicalDevice,
                                                     VkPhysicalDeviceProperties2* pPhysicalDeviceProperties2) override;
+
+    std::shared_ptr<CMD_BUFFER_STATE> CreateCmdBufferState(VkCommandBuffer cb,
+                                                           const VkCommandBufferAllocateInfo* pCreateInfo) final;
 };

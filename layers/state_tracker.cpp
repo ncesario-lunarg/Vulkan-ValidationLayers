@@ -861,13 +861,8 @@ VkFormatFeatureFlags ValidationStateTracker::GetPotentialFormatFeatures(VkFormat
 void ValidationStateTracker::ResetCommandBufferState(const VkCommandBuffer cb) {
     CMD_BUFFER_STATE *cb_state = GetCBState(cb);
     if (cb_state) {
-        cb_state->Reset();
         // Clean up the label data
         ResetCmdDebugUtilsLabel(report_data, cb_state->commandBuffer());
-    }
-
-    if (command_buffer_reset_callback) {
-        (*command_buffer_reset_callback)(cb);
     }
 }
 
@@ -2343,14 +2338,6 @@ void ValidationStateTracker::PreCallRecordDestroyDescriptorPool(VkDevice device,
 void ValidationStateTracker::FreeCommandBufferStates(COMMAND_POOL_STATE *pool_state, const uint32_t command_buffer_count,
                                                      const VkCommandBuffer *command_buffers) {
     for (uint32_t i = 0; i < command_buffer_count; i++) {
-        // Allow any derived class to clean up command buffer state
-        if (command_buffer_reset_callback) {
-            (*command_buffer_reset_callback)(command_buffers[i]);
-        }
-        if (command_buffer_free_callback) {
-            (*command_buffer_free_callback)(command_buffers[i]);
-        }
-
         auto cb_state = GetCBState(command_buffers[i]);
         // Remove references to command buffer's state and delete
         if (cb_state) {
@@ -2781,7 +2768,7 @@ void ValidationStateTracker::PostCallRecordAllocateCommandBuffers(VkDevice devic
         for (uint32_t i = 0; i < pCreateInfo->commandBufferCount; i++) {
             // Add command buffer to its commandPool map
             pool->commandBuffers.insert(pCommandBuffer[i]);
-            auto cb_state = std::make_shared<CMD_BUFFER_STATE>(pCommandBuffer[i], pCreateInfo);
+            auto cb_state = CreateCmdBufferState(pCommandBuffer[i], pCreateInfo);
             cb_state->command_pool = pool;
             cb_state->unprotected = pool->unprotected;
             // Add command buffer to map
@@ -2789,6 +2776,11 @@ void ValidationStateTracker::PostCallRecordAllocateCommandBuffers(VkDevice devic
             ResetCommandBufferState(pCommandBuffer[i]);
         }
     }
+}
+
+std::shared_ptr<CMD_BUFFER_STATE> ValidationStateTracker::CreateCmdBufferState(VkCommandBuffer cb,
+                                                                               const VkCommandBufferAllocateInfo *pCreateInfo) {
+    return std::make_shared<CMD_BUFFER_STATE>(cb, pCreateInfo);
 }
 
 void UpdateSubpassAttachments(const safe_VkSubpassDescription2 &subpass, std::vector<SUBPASS_INFO> &subpasses) {

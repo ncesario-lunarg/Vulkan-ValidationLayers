@@ -102,10 +102,6 @@ void UtilPostCallRecordCreateDevice(const VkDeviceCreateInfo *pCreateInfo, std::
         return;
     }
     object_ptr->desc_set_manager = std::move(desc_set_manager);
-
-    // Register callback to be called at any ResetCommandBuffer time
-    object_ptr->SetCommandBufferResetCallback(
-        [object_ptr](VkCommandBuffer command_buffer) -> void { object_ptr->ResetCommandBuffer(command_buffer); });
 }
 template <typename ObjectType>
 void UtilPreCallRecordDestroyDevice(ObjectType *object_ptr) {

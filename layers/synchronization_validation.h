@@ -995,6 +995,17 @@ class CommandBufferAccessContext : public CommandExecutionContext {
     bool destroyed_;
 };
 
+class CMD_BUFFER_STATE_SYNC : public CMD_BUFFER_STATE {
+  public:
+    SyncValidator *sync_device_state;
+
+    CMD_BUFFER_STATE_SYNC(VkCommandBuffer cb, const VkCommandBufferAllocateInfo *pCreateInfo, SyncValidator *sv)
+        : CMD_BUFFER_STATE(cb, pCreateInfo), sync_device_state(sv) {}
+
+    void Reset() final;
+    void Destroy() final;
+};
+
 class SyncValidator : public ValidationStateTracker, public SyncStageAccess {
   public:
     SyncValidator() { container_type = LayerObjectTypeSyncValidation; }
@@ -1355,4 +1366,7 @@ class SyncValidator : public ValidationStateTracker, public SyncStageAccess {
                                                  VkDeviceSize dstOffset, uint32_t marker) const override;
     void PreCallRecordCmdWriteBufferMarker2AMD(VkCommandBuffer commandBuffer, VkPipelineStageFlags2KHR stage, VkBuffer dstBuffer,
                                                VkDeviceSize dstOffset, uint32_t marker) override;
+
+    std::shared_ptr<CMD_BUFFER_STATE> CreateCmdBufferState(VkCommandBuffer cb,
+                                                           const VkCommandBufferAllocateInfo *pCreateInfo) final;
 };

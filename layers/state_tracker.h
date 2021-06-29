@@ -484,20 +484,6 @@ class ValidationStateTracker : public ValidationObject {
     PHYSICAL_DEVICE_STATE* GetPhysicalDeviceState();
     const PHYSICAL_DEVICE_STATE* GetPhysicalDeviceState() const;
 
-    using CommandBufferResetCallback = std::function<void(VkCommandBuffer)>;
-    std::unique_ptr<CommandBufferResetCallback> command_buffer_reset_callback;
-    template <typename Fn>
-    void SetCommandBufferResetCallback(Fn&& fn) {
-        command_buffer_reset_callback.reset(new CommandBufferResetCallback(std::forward<Fn>(fn)));
-    }
-
-    using CommandBufferFreeCallback = std::function<void(VkCommandBuffer)>;
-    std::unique_ptr<CommandBufferFreeCallback> command_buffer_free_callback;
-    template <typename Fn>
-    void SetCommandBufferFreeCallback(Fn&& fn) {
-        command_buffer_free_callback.reset(new CommandBufferFreeCallback(std::forward<Fn>(fn)));
-    }
-
     using SetImageViewInitialLayoutCallback = std::function<void(CMD_BUFFER_STATE*, const IMAGE_VIEW_STATE&, VkImageLayout)>;
     std::unique_ptr<SetImageViewInitialLayoutCallback> set_image_view_initial_layout_callback;
     template <typename Fn>
@@ -847,6 +833,8 @@ class ValidationStateTracker : public ValidationObject {
     void PostCallRecordReleaseProfilingLockKHR(VkDevice device) override;
 
     // Allocate/Free
+    virtual std::shared_ptr<CMD_BUFFER_STATE> CreateCmdBufferState(VkCommandBuffer cb,
+                                                                   const VkCommandBufferAllocateInfo* pCreateInfo);
     void PostCallRecordAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo* pCreateInfo,
                                               VkCommandBuffer* pCommandBuffer, VkResult result) override;
     void PostCallRecordAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo* pAllocateInfo,

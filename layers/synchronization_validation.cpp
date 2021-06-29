@@ -3348,20 +3348,6 @@ void SyncValidator::PostCallRecordCreateDevice(VkPhysicalDevice gpu, const VkDev
                                                const VkAllocationCallbacks *pAllocator, VkDevice *pDevice, VkResult result) {
     // The state tracker sets up the device state
     StateTracker::PostCallRecordCreateDevice(gpu, pCreateInfo, pAllocator, pDevice, result);
-
-    // Add the callback hooks for the functions that are either broadly or deeply used and that the ValidationStateTracker
-    // refactor would be messier without.
-    // TODO: Find a good way to do this hooklessly.
-    ValidationObject *device_object = GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);
-    ValidationObject *validation_data = GetValidationObject(device_object->object_dispatch, LayerObjectTypeSyncValidation);
-    SyncValidator *sync_device_state = static_cast<SyncValidator *>(validation_data);
-
-    sync_device_state->SetCommandBufferResetCallback([sync_device_state](VkCommandBuffer command_buffer) -> void {
-        sync_device_state->ResetCommandBufferCallback(command_buffer);
-    });
-    sync_device_state->SetCommandBufferFreeCallback([sync_device_state](VkCommandBuffer command_buffer) -> void {
-        sync_device_state->FreeCommandBufferCallback(command_buffer);
-    });
 }
 
 bool SyncValidator::ValidateBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin,
@@ -5838,6 +5824,11 @@ void SyncValidator::PreCallRecordCmdWriteBufferMarker2AMD(VkCommandBuffer comman
     }
 }
 
+std::shared_ptr<CMD_BUFFER_STATE> SyncValidator::CreateCmdBufferState(VkCommandBuffer cb,
+                                                                      const VkCommandBufferAllocateInfo *pCreateInfo) {
+    return std::static_pointer_cast<CMD_BUFFER_STATE>(std::make_shared<CMD_BUFFER_STATE_SYNC>(cb, pCreateInfo, this));
+}
+
 AttachmentViewGen::AttachmentViewGen(const IMAGE_VIEW_STATE *view, const VkOffset3D &offset, const VkExtent3D &extent)
     : view_(view), view_mask_(), gen_store_() {
     if (!view_ || !view_->image_state || !SimpleBinding(*view_->image_state)) return;
@@ -5909,3 +5900,13 @@ AttachmentViewGen::Gen AttachmentViewGen::GetDepthStencilRenderAreaGenType(bool 
 }
 
 AccessAddressType AttachmentViewGen::GetAddressType() const { return AccessContext::ImageAddressType(*view_->image_state); }
+
+void CMD_BUFFER_STATE_SYNC::Reset() {
+    CMD_BUFFER_STATE::Reset();
+    sync_device_state->ResetCommandBufferCallback(commandBuffer());
+}
+
+void CMD_BUFFER_STATE_SYNC::Destroy() {
+    CMD_BUFFER_STATE::Destroy();
+    sync_device_state->FreeCommandBufferCallback(commandBuffer());
+}
