@@ -951,6 +951,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(
         auto lock = intercept->write_lock();
         intercept->PostCallRecordEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices, result);
     }
+    --(*pPhysicalDeviceCount);
     return result;
 }
 
