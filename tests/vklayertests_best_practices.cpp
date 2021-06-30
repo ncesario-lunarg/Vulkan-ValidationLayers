@@ -675,8 +675,6 @@ TEST_F(VkBestPracticesLayerTest, TripleBufferingTest) {
     InitBestPracticesFramework();
     AddSwapchainDeviceExtension();
     InitState();
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                         "UNASSIGNED-BestPractices-vkCreateSwapchainKHR-suboptimal-swapchain-image-count");
     if (!InitSurface()) {
         printf("%s Cannot create surface, skipping test\n", kSkipPrefix);
         return;
@@ -693,6 +691,19 @@ TEST_F(VkBestPracticesLayerTest, TripleBufferingTest) {
     VkImageUsageFlags imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     VkSurfaceTransformFlagBitsKHR preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 
+    VkPresentModeKHR present_mode_vsync = VK_PRESENT_MODE_MAX_ENUM_KHR, present_mode_tearing = VK_PRESENT_MODE_MAX_ENUM_KHR;
+    for (const auto pm : m_surface_present_modes) {
+        if ((pm == VK_PRESENT_MODE_MAILBOX_KHR) || (pm == VK_PRESENT_MODE_FIFO_KHR)) {
+            present_mode_vsync = pm;
+        } else {
+            present_mode_tearing = pm;
+        }
+
+        if ((present_mode_vsync != VK_PRESENT_MODE_MAX_ENUM_KHR) && (present_mode_tearing != VK_PRESENT_MODE_MAX_ENUM_KHR)) {
+            break;
+        }
+    }
+
     VkSwapchainCreateInfoKHR swapchain_create_info = {};
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.pNext = 0;
@@ -706,19 +717,27 @@ TEST_F(VkBestPracticesLayerTest, TripleBufferingTest) {
     swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_create_info.preTransform = preTransform;
     swapchain_create_info.compositeAlpha = m_surface_composite_alpha;
-    swapchain_create_info.presentMode = m_surface_present_modes[0];
+    swapchain_create_info.presentMode = present_mode_vsync;
     swapchain_create_info.clipped = VK_FALSE;
     swapchain_create_info.oldSwapchain = 0;
 
-    VkResult err = vk::CreateSwapchainKHR(device(), &swapchain_create_info, nullptr, &m_swapchain);
-    m_errorMonitor->VerifyFound();
-
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "UNASSIGNED-BestPractices-vkCreateSwapchainKHR-suboptimal-swapchain-image-count");
+    vk::CreateSwapchainKHR(device(), &swapchain_create_info, nullptr, &m_swapchain);
+    m_errorMonitor->VerifyFound();
+
+    if (present_mode_tearing != VK_PRESENT_MODE_MAX_ENUM_KHR) {
+        swapchain_create_info.presentMode = present_mode_tearing;
+        m_errorMonitor->ExpectSuccess();
+        vk::CreateSwapchainKHR(device(), &swapchain_create_info, nullptr, &m_swapchain);
+        m_errorMonitor->VerifyNotFound();
+        swapchain_create_info.presentMode = present_mode_vsync;
+    }
+
     swapchain_create_info.minImageCount = 3;
-    err = vk::CreateSwapchainKHR(device(), &swapchain_create_info, nullptr, &m_swapchain);
+    m_errorMonitor->ExpectSuccess();
+    vk::CreateSwapchainKHR(device(), &swapchain_create_info, nullptr, &m_swapchain);
     m_errorMonitor->VerifyNotFound();
-    ASSERT_VK_SUCCESS(err)
     DestroySwapchain();
 }
 
