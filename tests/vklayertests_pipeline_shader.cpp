@@ -81,20 +81,45 @@ TEST_F(VkLayerTest, PipelineNotBound) {
 TEST_F(VkLayerTest, PipelineWrongBindPointGraphics) {
     TEST_DESCRIPTION("Bind a compute pipeline in the graphics bind point");
 
-    m_errorMonitor->SetDesiredFailureMsg(kErrorBit, "VUID-vkCmdBindPipeline-pipelineBindPoint-00779");
+    // m_errorMonitor->SetDesiredFailureMsg(kErrorBit, "VUID-vkCmdBindPipeline-pipelineBindPoint-00779");
+    m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    // ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const char *cs = R"glsl(#version 450
+    layout(local_size_x=1) in;
+    layout(set=0, binding=0) uniform block { vec4 x; };
+    void main(){
+        vec4 v = 2.0 * x;
+       //x = vec4(1);
+    }
+    )glsl";
 
     CreateComputePipelineHelper pipe(*this);
     pipe.InitInfo();
+    pipe.cs_ = layer_data::make_unique<VkShaderObj>(m_device, cs, VK_SHADER_STAGE_COMPUTE_BIT, this);
     pipe.InitState();
     pipe.CreateComputePipeline();
 
-    m_commandBuffer->begin();
-    vk::CmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.pipeline_);
+    VkBufferObj buffer;
+    auto bci = LvlInitStruct<VkBufferCreateInfo>();
+    bci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bci.size = 1024;
+    buffer.init(*m_device, bci);
+    pipe.descriptor_set_->WriteDescriptorBufferInfo(0, buffer.handle(), 0, 1024);
+    pipe.descriptor_set_->UpdateDescriptorSets();
 
-    m_errorMonitor->VerifyFound();
+    m_commandBuffer->begin();
+    vk::CmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_COMPUTE, pipe.pipeline_layout_.handle(), 0, 1,
+                              &pipe.descriptor_set_->set_, 0, nullptr);
+
+    vk::CmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_COMPUTE, pipe.pipeline_);
+
+    vk::CmdDispatch(m_commandBuffer->handle(), 1, 1, 1);
+
+    // m_errorMonitor->VerifyFound();
+    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkLayerTest, PipelineWrongBindPointCompute) {
