@@ -1793,8 +1793,13 @@ bool CoreChecks::ValidatePipelineShaderStage(VkPipelineShaderStageCreateInfo con
             }
 
             if ((map_entry.offset + map_entry.size) <= specialization_info->dataSize) {
-                auto entry = id_value_map.emplace(map_entry.constantID, std::vector<uint32_t>(map_entry.size > 4 ? 2 : 1));
-                memcpy(entry.first->second.data(), specialization_data + map_entry.offset, map_entry.size);
+                std::vector<uint32_t> entry_data((map_entry.size + 4 - 1) / 4);
+                uint8_t *out_p = reinterpret_cast<uint8_t *>(entry_data.data());
+                const uint8_t *const start_p = specialization_data + map_entry.offset;
+                const uint8_t *const end_p = start_p + map_entry.size;
+
+                std::copy(start_p, end_p, out_p);
+                id_value_map.emplace(map_entry.constantID, std::move(entry_data));
             }
         }
 
